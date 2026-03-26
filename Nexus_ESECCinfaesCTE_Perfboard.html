@@ -1059,8 +1059,9 @@ const PerfboardDesigner = function PerfboardDesigner() {
     const rect = svg.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = (clientX - rect.left) / zoom,
-      y = (clientY - rect.top) / zoom;
+    const scale = zoom * (dualView ? 0.5 : 1);
+    const x = (clientX - rect.left) / scale,
+      y = (clientY - rect.top) / scale;
     const c = Math.round((x - BP) / HS),
       r = Math.round((y - BP) / HS);
     if (r < 0 || r >= board.rows || c < 0 || c >= board.cols) return null;
@@ -1068,7 +1069,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
       r,
       c
     };
-  }, [zoom, board]);
+  }, [zoom, board, dualView]);
   const handleSvgClick = e => {
     if (dragging) return;
     const h = getHole(e);
@@ -2606,8 +2607,8 @@ const PerfboardDesigner = function PerfboardDesigner() {
       },
       style: {
         position: "fixed",
-        left: rect.left + x * zoom - 40,
-        top: rect.top + y * zoom - 24,
+        left: rect.left + x * zoom * (dualView ? 0.5 : 1) - 40,
+        top: rect.top + y * zoom * (dualView ? 0.5 : 1) - 24,
         width: 80,
         background: "#1e293b",
         color: "#f59e0b",
