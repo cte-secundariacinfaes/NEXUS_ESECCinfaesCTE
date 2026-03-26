@@ -65,6 +65,8 @@ Aluno.html      ──🔄 Carregar───→  Google Sheets (lê config + esc
 - 10 ferramentas: fio, resistência, condensador, LED, díodo, CI, header, jumper, etiqueta, biblioteca
 - Biblioteca com 15+ componentes pré-definidos (DIP-8/14/16/28, Arduino Nano, ESP32, módulo relé, etc.)
 - Criador de componentes personalizados (nome, tamanho, pinos, cor)
+- Ferramenta Borracha (⌫) — apagar componentes e limpar furos órfãos com um clique
+- Limpeza automática de furos ao apagar componentes (Delete, ✕, Borracha)
 - Deteção automática de nets e alertas de conflito (curto-circuito)
 - Vista frente + verso (lado do cobre espelhado)
 - Drag-and-drop e edição inline de etiquetas
