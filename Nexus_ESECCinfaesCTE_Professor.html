@@ -6968,7 +6968,7 @@ function renderAulasSessions(){
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
         <button class="btn btn-sm ${s.aberta?'btn-danger':'btn-primary'}" style="${s.aberta?'':'background:#7C3AED'}"
           onclick="event.stopPropagation();aulasToggleSessao('${s.id}')">${s.aberta?'⏹ Fechar':'▶ Abrir'}</button>
-        \${s.aberta?'<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();aulasSessionQR(\\''+s.id+'\\')">\u{1F4F2} QR</button>':''}
+        ${s.aberta?'<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();aulasSessionQR(\''+s.id+'\')">📲 QR</button>':''}
         <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();aulasRemoveSessao('${s.id}')">🗑️</button>
       </div>
     </div>`;
