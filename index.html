@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus ESECCinfãesCTE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,800;1,9..40,400&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0F2447;--blue:#1B3A6B;--accent:#0284C7;--teal:#0891B2;
+  --green:#059669;--purple:#7C3AED;--gold:#D97706;--red:#DC2626;
+  --bg:#F0F4F8;--card:#fff;--text:#1E293B;--muted:#64748B;--border:#E2E8F0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column}
+
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#162D54 40%,var(--blue) 100%);
+  color:#fff;padding:48px 24px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 20% 80%,rgba(2,132,199,.15) 0%,transparent 50%),
+             radial-gradient(circle at 80% 20%,rgba(124,58,237,.1) 0%,transparent 50%);pointer-events:none}
+.hero-icon{font-size:3rem;margin-bottom:8px;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))}
+.hero h1{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;letter-spacing:-.02em;margin-bottom:4px;line-height:1.15}
+.hero h1 span{background:linear-gradient(90deg,#38BDF8,#34D399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:clamp(.82rem,2vw,.95rem);opacity:.7;max-width:520px;margin:0 auto;line-height:1.6}
+
+.login-section{max-width:420px;margin:-24px auto 0;padding:0 20px;position:relative;z-index:2}
+.login-card{background:var(--card);border-radius:20px;padding:28px 24px;
+  box-shadow:0 8px 32px rgba(0,0,0,.1);border:2px solid transparent}
+.login-card h2{font-size:1.1rem;font-weight:800;color:var(--navy);margin-bottom:4px;text-align:center}
+.login-card .login-sub{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:18px}
+.login-tabs{display:flex;gap:4px;background:#F1F5F9;border-radius:10px;padding:3px;margin-bottom:18px}
+.login-tab{flex:1;padding:8px;border:none;border-radius:8px;font-family:inherit;
+  font-size:.82rem;font-weight:700;cursor:pointer;transition:.2s;background:none;color:var(--muted)}
+.login-tab.active{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(15,36,71,.2)}
+.login-field{margin-bottom:12px}
+.login-field label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:4px}
+.login-field input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+  font-family:inherit;font-size:.9rem;transition:.2s}
+.login-field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(2,132,199,.15)}
+.login-btn{width:100%;padding:12px;border:none;border-radius:12px;font-family:inherit;
+  font-size:.92rem;font-weight:800;cursor:pointer;transition:.2s;margin-top:4px}
+.login-btn.aluno{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;
+  box-shadow:0 4px 14px rgba(5,150,105,.3)}
+.login-btn.prof{background:linear-gradient(135deg,var(--blue),var(--accent));color:#fff;
+  box-shadow:0 4px 14px rgba(2,132,199,.3)}
+.login-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;filter:none!important}
+.login-err{font-size:.78rem;color:var(--red);min-height:20px;text-align:center;margin-top:8px}
+.login-status{font-size:.75rem;color:var(--muted);text-align:center;margin-top:6px;min-height:18px}
+.login-skip{display:block;text-align:center;font-size:.75rem;color:var(--muted);margin-top:14px;text-decoration:none;transition:.2s}
+.login-skip:hover{color:var(--accent)}
+
+.welcome-bar{background:linear-gradient(135deg,#F0FDF4,#ECFDF5);border:1.5px solid #86EFAC;
+  border-radius:14px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.welcome-bar .wb-avatar{width:42px;height:42px;border-radius:50%;background:var(--green);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800}
+.welcome-bar .wb-info{flex:1}
+.welcome-bar .wb-name{font-size:.92rem;font-weight:800;color:#065F46}
+.welcome-bar .wb-meta{font-size:.72rem;color:#059669}
+.welcome-bar .wb-logout{font-size:.72rem;color:var(--muted);cursor:pointer;background:none;
+  border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-family:inherit;transition:.2s}
+.welcome-bar .wb-logout:hover{background:#FEF2F2;color:var(--red);border-color:#FCA5A5}
+
+.nav-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.nav-card{display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:18px 12px;background:var(--card);border-radius:14px;text-decoration:none;color:var(--text);
+  border:1.5px solid var(--border);transition:.2s;cursor:pointer}
+.nav-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.nav-card .nc-icon{font-size:1.8rem;margin-bottom:4px}
+.nav-card .nc-title{font-size:.85rem;font-weight:800}
+.nav-card .nc-desc{font-size:.68rem;color:var(--muted);margin-top:2px}
+.nav-card.prof{border-left:4px solid var(--accent)}
+.nav-card.aluno{border-left:4px solid var(--green)}
+
+.tools-section{max-width:420px;margin:16px auto 0;padding:0 20px}
+.tool-card{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:14px;
+  padding:16px 18px;text-decoration:none;color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,.04);
+  border:1.5px solid var(--border);transition:.2s}
+.tool-card:hover{border-color:#22c55e;transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.tool-icon{font-size:2rem;flex-shrink:0}
+.tool-info{flex:1}
+.tool-title{font-size:.92rem;font-weight:800;color:var(--navy)}
+.tool-desc{font-size:.75rem;color:var(--muted);margin-top:2px}
+
+.setup-section{max-width:420px;margin:20px auto 0;padding:0 20px}
+.setup-card{background:var(--card);border-radius:14px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
+.setup-card summary{font-size:.88rem;font-weight:700;color:var(--navy);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px}
+.setup-card summary::before{content:'▶';font-size:.7rem;transition:.2s;display:inline-block}
+.setup-card[open] summary::before{transform:rotate(90deg)}
+.setup-card .steps{counter-reset:step;margin-top:12px}
+.setup-card .step{counter-increment:step;padding:6px 0 6px 36px;position:relative;
+  font-size:.82rem;color:var(--muted);line-height:1.6;border-left:2px solid #E2E8F0;margin-left:12px}
+.setup-card .step::before{content:counter(step);position:absolute;left:-13px;top:4px;
+  width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700}
+.setup-card .step strong{color:var(--text)}
+.setup-card .step code{font-family:'JetBrains Mono',monospace;font-size:.78rem;
+  background:#F1F5F9;padding:1px 6px;border-radius:4px;color:var(--accent)}
+
+.config-section{max-width:420px;margin:14px auto 0;padding:0 20px}
+.config-card{background:#FFFBEB;border:1.5px solid #FDE68A;border-radius:12px;padding:14px 16px}
+.config-field label{display:block;font-size:.75rem;font-weight:600;color:#92400E;margin-bottom:3px}
+.config-field input{width:100%;padding:8px 12px;border:1.5px solid #FDE68A;border-radius:8px;
+  font-family:inherit;font-size:.82rem;margin-bottom:8px}
+.config-field input:focus{outline:none;border-color:var(--gold)}
+.config-btn{padding:8px 16px;border:none;border-radius:8px;font-family:inherit;
+  font-size:.82rem;font-weight:700;cursor:pointer;background:var(--gold);color:#fff}
+
+.footer{margin-top:auto;padding:24px;text-align:center;font-size:.78rem;color:var(--muted);line-height:1.8}
+.footer a{color:var(--accent);text-decoration:none}
+.footer a:hover{text-decoration:underline}
+
+@media(max-width:600px){
+  .hero{padding:32px 16px 28px}
+  .login-section{margin-top:-18px;padding:0 12px}
+  .nav-cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="hero-icon">🔗</span>
+  <h1>Nexus <span>ESECCinfãesCTE</span></h1>
+  <p>Plataforma de avaliação, presenças e ferramentas para o Curso Profissional EAC</p>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div class="login-section" id="section-login">
+  <div class="login-card">
+    <h2>🔑 Entrar</h2>
+    <div class="login-sub">Introduz as tuas credenciais para aceder ao sistema</div>
+    <div class="login-tabs">
+      <button class="login-tab active" id="tab-aluno" onclick="switchTab('aluno')">🎓 Aluno</button>
+      <button class="login-tab" id="tab-prof" onclick="switchTab('prof')">👨‍🏫 Professor</button>
+    </div>
+    <div class="login-field">
+      <label id="lbl-id">Nº de Aluno</label>
+      <input type="text" id="login-id" placeholder="ex: 12045" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-pwd').focus()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pwd" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn aluno" id="login-btn" onclick="doLogin()">🔑 Entrar como Aluno</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-status" id="login-status"></div>
+    <a href="#" class="login-skip" onclick="event.preventDefault();showDirect()">Acesso direto (sem login centralizado) →</a>
+  </div>
+</div>
+
+<!-- ═══ WELCOME (after login) ═══ -->
+<div class="login-section" id="section-welcome" style="display:none">
+  <div class="welcome-bar">
+    <div class="wb-avatar" id="wb-avatar">?</div>
+    <div class="wb-info">
+      <div class="wb-name" id="wb-name">—</div>
+      <div class="wb-meta" id="wb-meta">—</div>
+    </div>
+    <button class="wb-logout" onclick="doLogout()">Sair</button>
+  </div>
+  <div class="nav-cards" id="nav-cards"></div>
+</div>
+
+<!-- ═══ DIRECT ACCESS (fallback) ═══ -->
+<div class="login-section" id="section-direct" style="display:none">
+  <div style="text-align:center;margin-bottom:12px">
+    <a href="#" onclick="event.preventDefault();hideDirect()" style="font-size:.78rem;color:var(--accent)">← Voltar ao login</a>
+  </div>
+  <div class="nav-cards">
+    <a class="nav-card prof" href="Nexus_ESECCinfaesCTE_Professor.html">
+      <div class="nc-icon">👨‍🏫</div><div class="nc-title">Professor</div><div class="nc-desc">Acesso direto sem login</div>
+    </a>
+    <a class="nav-card aluno" href="Nexus_ESECCinfaesCTE_Aluno.html">
+      <div class="nc-icon">🎓</div><div class="nc-title">Aluno</div><div class="nc-desc">Acesso direto sem login</div>
+    </a>
+  </div>
+</div>
+
+<!-- ═══ TOOLS ═══ -->
+<div class="tools-section">
+  <a class="tool-card" href="Nexus_ESECCinfaesCTE_Perfboard.html">
+    <div class="tool-icon">⊞</div>
+    <div class="tool-info">
+      <div class="tool-title">Perfboard Designer</div>
+      <div class="tool-desc">Projetar ligações em placas PCB e breadboards</div>
+    </div>
+  </a>
+</div>
+
+<!-- ═══ SETUP ═══ -->
+<div class="setup-section">
+  <details class="setup-card">
+    <summary>🚀 Configuração Inicial</summary>
+    <div class="steps">
+      <div class="step">Cria dois <strong>Google Sheets</strong>: um <strong>Mestre</strong> (utilizadores) e um por <strong>Turma</strong> (dados)</div>
+      <div class="step">Em cada Sheets: <code>Extensões → Apps Script</code> → cola o código correspondente (<code>Code_Mestre.gs</code> ou <code>Code.gs</code>)</div>
+      <div class="step">Implementa cada um como <strong>Aplicação Web</strong> (Qualquer pessoa)</div>
+      <div class="step">No Sheets Mestre, adiciona os alunos na folha <strong>"Utilizadores"</strong></div>
+      <div class="step">No Professor, configura turmas, locais, sessões e clica <strong>📡 Publicar</strong></div>
+      <div class="step">Distribui apenas o link do <strong>index.html</strong> e as passwords aos alunos</div>
+    </div>
+  </details>
+</div>
+
+<!-- ═══ MESTRE URL CONFIG (only via ?config) ═══ -->
+<div class="config-section" id="config-section" style="display:none">
+  <div class="config-card">
+    <div style="font-size:.82rem;font-weight:700;color:#92400E;margin-bottom:8px">⚙️ Configurar URL do Mestre</div>
+    <div class="config-field">
+      <label>URL do Apps Script (Sheets Mestre)</label>
+      <input type="url" id="config-mestre-url" placeholder="https://script.google.com/macros/s/…/exec">
+    </div>
+    <button class="config-btn" onclick="saveMestreUrl()">💾 Guardar e Testar</button>
+    <div id="config-status" style="font-size:.75rem;min-height:18px;margin-top:6px;color:var(--muted)"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC<br>
+  Desenvolvido por <a href="#">Avelino A. Colaço</a> ·
+  <a href="Nexus_ESECCinfaesCTE_Manual.html">📖 Manual</a>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// NEXUS INDEX — Login Gateway (Opção C)
+// ═══════════════════════════════════════════════════════════════
+var MESTRE_URL_KEY = 'nexus_mestre_url';
+// ── HARDCODE: after deploying the Mestre Apps Script, paste the URL here ──
+// Once set, no one needs to configure anything — just open index.html.
+// Leave empty ('') to use localStorage fallback.
+var HARDCODED_MESTRE_URL = 'https://script.google.com/macros/s/AKfycbyKY7oHWdkkkmrPElA9zXQRjF9NRGETWZioDt_pV0WkYi0jfjf2fva4Ta0fwEz26Nx4/exec';
+// ── Security token — must match Code_Mestre.gs and Code.gs ──
+var API_TOKEN = 'nexus_eac_2026_token';
+var SESSION_KEY    = 'nexus_session';
+var SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function hashPwd(pwd){
+  var hash = 5381;
+  for(var i=0;i<pwd.length;i++) hash = ((hash << 5) + hash) + pwd.charCodeAt(i);
+  return 'h_'+(hash >>> 0).toString(36);
+}
+
+// ── Session ──────────────────────────────────────────────────
+function getSession(){
+  try{
+    var raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    var s = JSON.parse(raw);
+    if(Date.now() - new Date(s._ts).getTime() > SESSION_EXPIRY){
+      localStorage.removeItem(SESSION_KEY); return null;
+    }
+    return s;
+  }catch(e){ return null; }
+}
+function setSession(data){
+  data._ts = new Date().toISOString();
+  localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+}
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+function getMestreUrl(){ return HARDCODED_MESTRE_URL || localStorage.getItem(MESTRE_URL_KEY) || ''; }
+function setMestreUrl(url){ localStorage.setItem(MESTRE_URL_KEY, url); }
+
+// ── Tabs ─────────────────────────────────────────────────────
+var currentTab = 'aluno';
+function switchTab(tab){
+  currentTab = tab;
+  document.getElementById('tab-aluno').classList.toggle('active', tab==='aluno');
+  document.getElementById('tab-prof').classList.toggle('active', tab==='prof');
+  document.getElementById('lbl-id').textContent = tab==='aluno' ? 'Nº de Aluno' : 'Nome de utilizador';
+  document.getElementById('login-id').placeholder = tab==='aluno' ? 'ex: 12045' : 'ex: avelino';
+  document.getElementById('login-btn').textContent = tab==='aluno' ? '🔑 Entrar como Aluno' : '🔑 Entrar como Professor';
+  document.getElementById('login-btn').className = 'login-btn ' + tab;
+  document.getElementById('login-err').textContent = '';
+}
+
+// ── Login ────────────────────────────────────────────────────
+async function doLogin(){
+  var id  = document.getElementById('login-id').value.trim();
+  var pwd = document.getElementById('login-pwd').value;
+  var err = document.getElementById('login-err');
+  var status = document.getElementById('login-status');
+  var btn = document.getElementById('login-btn');
+
+  if(!id || !pwd){ err.textContent = 'Preenche os dois campos.'; return; }
+
+  var mestreUrl = getMestreUrl();
+  if(!mestreUrl){
+    err.textContent = '';
+    if(new URLSearchParams(location.search).has('config')){
+      document.getElementById('config-section').style.display = 'block';
+    }
+    status.textContent = '⚠️ Sistema não configurado. Contacta o professor.';
+    return;
+  }
+
+  err.textContent = '';
+  btn.disabled = true;
+  status.textContent = '⏳ A verificar...';
+
+  try{
+    var r = await fetch(mestreUrl, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'login', id:id, pwd:hashPwd(pwd), token:API_TOKEN})
+    });
+    var res = await r.json();
+    if(res.ok){
+      // Store session data for Aluno/Professor to pick up
+      setSession(res);
+      // Also store sheetsUrl so Aluno.html auto-configures
+      if(res.sheetsUrl) localStorage.setItem('nexus_session_sheets_url', res.sheetsUrl);
+      status.textContent = '✅ Bem-vindo, ' + res.nome + '!';
+      setTimeout(function(){ showLoggedIn(res); }, 400);
+    } else {
+      err.textContent = res.msg || 'Erro de autenticação.';
+      status.textContent = '';
+    }
+  }catch(e){
+    err.textContent = 'Erro de ligação. Verifica o URL do Mestre.';
+    status.textContent = '';
+  }
+  btn.disabled = false;
+}
+
+// ── Logged in ────────────────────────────────────────────────
+function showLoggedIn(s){
+  document.getElementById('section-login').style.display = 'none';
+  document.getElementById('section-direct').style.display = 'none';
+  document.getElementById('section-welcome').style.display = 'block';
+  document.getElementById('config-section').style.display = 'none';
+
+  document.getElementById('wb-avatar').textContent = (s.nome||'?').charAt(0).toUpperCase();
+  document.getElementById('wb-name').textContent = s.nome || '—';
+  document.getElementById('wb-meta').textContent = [
+    s.tipo==='prof' ? '👨‍🏫 Professor' : '🎓 Nº ' + s.id,
+    s.turma
+  ].filter(Boolean).join(' · ');
+
+  var cards = document.getElementById('nav-cards');
+  if(s.tipo === 'prof'){
+    cards.innerHTML =
+      '<a class="nav-card prof" href="Nexus_ESECCinfaesCTE_Professor.html"><div class="nc-icon">👨‍🏫</div><div class="nc-title">Área do Professor</div><div class="nc-desc">Gestão, avaliação, relatórios</div></a>' +
+      '<a class="nav-card aluno" href="Nexus_ESECCinfaesCTE_Aluno.html"><div class="nc-icon">🎓</div><div class="nc-title">Ver como Aluno</div><div class="nc-desc">Testar a vista do aluno</div></a>';
+  } else {
+    cards.innerHTML =
+      '<a class="nav-card aluno" href="Nexus_ESECCinfaesCTE_Aluno.html"><div class="nc-icon">🎓</div><div class="nc-title">Entrar</div><div class="nc-desc">' + (s.turma||'') + '</div></a>' +
+      '<a class="nav-card" href="Nexus_ESECCinfaesCTE_Perfboard.html"><div class="nc-icon">⊞</div><div class="nc-title">Perfboard</div><div class="nc-desc">Designer de PCBs</div></a>';
+  }
+}
+
+function doLogout(){
+  clearSession();
+  localStorage.removeItem('nexus_session_sheets_url');
+  document.getElementById('section-welcome').style.display = 'none';
+  document.getElementById('section-login').style.display = 'block';
+  document.getElementById('login-id').value = '';
+  document.getElementById('login-pwd').value = '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('login-status').textContent = '';
+}
+
+// ── Direct access ────────────────────────────────────────────
+function showDirect(){
+  document.getElementById('section-login').style.display = 'none';
+  document.getElementById('section-direct').style.display = 'block';
+}
+function hideDirect(){
+  document.getElementById('section-direct').style.display = 'none';
+  document.getElementById('section-login').style.display = 'block';
+}
+
+// ── Mestre URL config ────────────────────────────────────────
+async function saveMestreUrl(){
+  var url = document.getElementById('config-mestre-url').value.trim();
+  var status = document.getElementById('config-status');
+  if(!url || !url.startsWith('https://script.google.com')){
+    status.textContent = '❌ URL inválido.'; return;
+  }
+  status.textContent = '⏳ A testar...';
+  try{
+    var r = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'ping', token:API_TOKEN})});
+    var res = await r.json();
+    if(res.ok){
+      setMestreUrl(url);
+      status.textContent = '✅ Mestre ligado! Podes fazer login.';
+      document.getElementById('config-section').style.display = 'none';
+      document.getElementById('login-status').textContent = '✅ Mestre configurado.';
+    } else { status.textContent = '❌ ' + (res.msg||'Erro.'); }
+  }catch(e){ status.textContent = '❌ Erro de ligação.'; }
+}
+
+// ── Init ─────────────────────────────────────────────────────
+(function(){
+  var session = getSession();
+  if(session && session.ok){
+    showLoggedIn(session);
+    return;
+  }
+  var showConfig = new URLSearchParams(location.search).has('config');
+  if(!getMestreUrl()){
+    if(showConfig){
+      document.getElementById('config-section').style.display = 'block';
+      document.getElementById('login-status').textContent = '⚙️ Configura o URL do Mestre abaixo.';
+    } else {
+      document.getElementById('login-status').textContent = '⚠️ Sistema não configurado. Contacta o professor.';
+    }
+  }
+  setTimeout(function(){ document.getElementById('login-id').focus(); }, 300);
+})();
+</script>
+</body>
+</html>

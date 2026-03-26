@@ -1,0 +1,3472 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Perfboard Designer — PCB Layout Tool</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2322c55e'/><text x='16' y='22' text-anchor='middle' font-size='18' font-weight='900' fill='%23000'>⊞</text></svg>">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+  body { background: #0c0c14; }
+</style>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo
+} = React;
+
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════
+const HS = 22,
+  HR = 3.2,
+  PR = 5.5,
+  BP = 22;
+const PERFBOARDS = [{
+  id: "p2x8",
+  label: "2×8 cm",
+  cols: 30,
+  rows: 7,
+  type: "perfboard"
+}, {
+  id: "p3x7",
+  label: "3×7 cm",
+  cols: 26,
+  rows: 11,
+  type: "perfboard"
+}, {
+  id: "p4x6",
+  label: "4×6 cm",
+  cols: 22,
+  rows: 15,
+  type: "perfboard"
+}, {
+  id: "p5x7",
+  label: "5×7 cm",
+  cols: 26,
+  rows: 19,
+  type: "perfboard"
+}, {
+  id: "p7x9",
+  label: "7×9 cm",
+  cols: 34,
+  rows: 26,
+  type: "perfboard"
+}];
+const BREADBOARDS = [{
+  id: "bb_half",
+  label: "Breadboard Half",
+  cols: 30,
+  rows: 14,
+  type: "breadboard",
+  powerRows: [0, 1, 12, 13],
+  gapAfterRow: 6,
+  groupSize: 5
+}, {
+  id: "bb_full",
+  label: "Breadboard Full",
+  cols: 63,
+  rows: 14,
+  type: "breadboard",
+  powerRows: [0, 1, 12, 13],
+  gapAfterRow: 6,
+  groupSize: 5
+}];
+const ALL_BOARDS = [...PERFBOARDS, ...BREADBOARDS];
+
+// Custom boards stored in state (can grow dynamically)
+const INITIAL_CUSTOM_BOARDS = [];
+const COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c", "#e67e22", "#ecf0f1", "#34495e", "#e91e63"];
+const TOOLS = [{
+  id: "wire",
+  label: "Fio",
+  icon: "━",
+  desc: "Ligação ponto-a-ponto",
+  clicks: 2
+}, {
+  id: "resistor",
+  label: "Resistência",
+  icon: "⏛",
+  desc: "2 terminais",
+  clicks: 2
+}, {
+  id: "capacitor",
+  label: "Condensador",
+  icon: "⊥",
+  desc: "2 terminais",
+  clicks: 2
+}, {
+  id: "led",
+  label: "LED",
+  icon: "◐",
+  desc: "2 terminais (A/K)",
+  clicks: 2
+}, {
+  id: "diode",
+  label: "Díodo",
+  icon: "▷",
+  desc: "2 terminais (A/K)",
+  clicks: 2
+}, {
+  id: "ic",
+  label: "CI / IC",
+  icon: "▪",
+  desc: "Circuito integrado",
+  clicks: 1
+}, {
+  id: "header",
+  label: "Header",
+  icon: "▥",
+  desc: "Barra de pinos",
+  clicks: 1
+}, {
+  id: "jumper",
+  label: "Jumper",
+  icon: "⌒",
+  desc: "Ponte aérea",
+  clicks: 2
+}, {
+  id: "label",
+  label: "Etiqueta",
+  icon: "A",
+  desc: "Texto na placa",
+  clicks: 1
+}, {
+  id: "library",
+  label: "Biblioteca",
+  icon: "◫",
+  desc: "Componente da lib.",
+  clicks: 1
+}];
+
+// ─── Preset Library ───
+const PRESET_LIBRARY = [{
+  id: "dip8",
+  name: "DIP-8",
+  cat: "ICs",
+  w: 4,
+  h: 2,
+  bodyColor: "#1a1a2e",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }, {
+    r: 0,
+    c: 2
+  }, {
+    r: 0,
+    c: 3
+  }, {
+    r: 1,
+    c: 0
+  }, {
+    r: 1,
+    c: 1
+  }, {
+    r: 1,
+    c: 2
+  }, {
+    r: 1,
+    c: 3
+  }]
+}, {
+  id: "dip14",
+  name: "DIP-14",
+  cat: "ICs",
+  w: 7,
+  h: 2,
+  bodyColor: "#1a1a2e",
+  pins: Array.from({
+    length: 14
+  }, (_, i) => i < 7 ? {
+    r: 0,
+    c: i
+  } : {
+    r: 1,
+    c: i - 7
+  })
+}, {
+  id: "dip16",
+  name: "DIP-16",
+  cat: "ICs",
+  w: 8,
+  h: 2,
+  bodyColor: "#1a1a2e",
+  pins: Array.from({
+    length: 16
+  }, (_, i) => i < 8 ? {
+    r: 0,
+    c: i
+  } : {
+    r: 1,
+    c: i - 8
+  })
+}, {
+  id: "dip28",
+  name: "DIP-28",
+  cat: "ICs",
+  w: 14,
+  h: 2,
+  bodyColor: "#1a1a2e",
+  pins: Array.from({
+    length: 28
+  }, (_, i) => i < 14 ? {
+    r: 0,
+    c: i
+  } : {
+    r: 1,
+    c: i - 14
+  })
+}, {
+  id: "arduino_nano",
+  name: "Arduino Nano",
+  cat: "MCU",
+  w: 15,
+  h: 2,
+  bodyColor: "#00607a",
+  pins: Array.from({
+    length: 30
+  }, (_, i) => i < 15 ? {
+    r: 0,
+    c: i
+  } : {
+    r: 1,
+    c: i - 15
+  })
+}, {
+  id: "arduino_uno_header",
+  name: "Arduino UNO (Headers)",
+  cat: "MCU",
+  w: 18,
+  h: 2,
+  bodyColor: "#006d77",
+  pins: Array.from({
+    length: 36
+  }, (_, i) => i < 18 ? {
+    r: 0,
+    c: i
+  } : {
+    r: 1,
+    c: i - 18
+  })
+}, {
+  id: "esp32_devkit",
+  name: "ESP32 DevKit",
+  cat: "MCU",
+  w: 19,
+  h: 2,
+  bodyColor: "#880000",
+  pins: Array.from({
+    length: 38
+  }, (_, i) => i < 19 ? {
+    r: 0,
+    c: i
+  } : {
+    r: 1,
+    c: i - 19
+  })
+}, {
+  id: "relay_module",
+  name: "Módulo Relé",
+  cat: "Módulos",
+  w: 4,
+  h: 3,
+  bodyColor: "#2244aa",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }, {
+    r: 0,
+    c: 2
+  }, {
+    r: 0,
+    c: 3
+  }, {
+    r: 2,
+    c: 0
+  }, {
+    r: 2,
+    c: 1
+  }, {
+    r: 2,
+    c: 3
+  }]
+}, {
+  id: "reg_7805",
+  name: "7805 Regulador",
+  cat: "Potência",
+  w: 3,
+  h: 1,
+  bodyColor: "#333",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }, {
+    r: 0,
+    c: 2
+  }]
+}, {
+  id: "pot",
+  name: "Potenciómetro",
+  cat: "Passivos",
+  w: 3,
+  h: 2,
+  bodyColor: "#4466aa",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }, {
+    r: 0,
+    c: 2
+  }]
+}, {
+  id: "button_4pin",
+  name: "Botão 4 pinos",
+  cat: "Interface",
+  w: 2,
+  h: 2,
+  bodyColor: "#555",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }, {
+    r: 1,
+    c: 0
+  }, {
+    r: 1,
+    c: 1
+  }]
+}, {
+  id: "crystal",
+  name: "Cristal",
+  cat: "Passivos",
+  w: 2,
+  h: 1,
+  bodyColor: "#888",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }]
+}, {
+  id: "oled_ssd1306",
+  name: "OLED I2C 4pin",
+  cat: "Displays",
+  w: 4,
+  h: 1,
+  bodyColor: "#111",
+  pins: [{
+    r: 0,
+    c: 0
+  }, {
+    r: 0,
+    c: 1
+  }, {
+    r: 0,
+    c: 2
+  }, {
+    r: 0,
+    c: 3
+  }]
+}, {
+  id: "sip6",
+  name: "SIP-6 (6 pinos)",
+  cat: "Genérico",
+  w: 6,
+  h: 1,
+  bodyColor: "#444",
+  pins: Array.from({
+    length: 6
+  }, (_, i) => ({
+    r: 0,
+    c: i
+  }))
+}, {
+  id: "sip8",
+  name: "SIP-8 (8 pinos)",
+  cat: "Genérico",
+  w: 8,
+  h: 1,
+  bodyColor: "#444",
+  pins: Array.from({
+    length: 8
+  }, (_, i) => ({
+    r: 0,
+    c: i
+  }))
+}];
+
+// ═══════════════════════════════════════════════════════════════════
+// STORAGE ABSTRACTION (works in Claude artifacts AND GitHub Pages)
+// ═══════════════════════════════════════════════════════════════════
+const store = {
+  async get(k) {
+    try {
+      if (window.storage?.get) {
+        const r = await window.storage.get(k);
+        return r?.value || null;
+      }
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  async set(k, v) {
+    try {
+      if (window.storage?.set) {
+        await window.storage.set(k, v);
+        return true;
+      }
+      localStorage.setItem(k, v);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  async del(k) {
+    try {
+      if (window.storage?.delete) {
+        await window.storage.delete(k);
+        return true;
+      }
+      localStorage.removeItem(k);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  async list(prefix) {
+    try {
+      if (window.storage?.list) {
+        const r = await window.storage.list(prefix);
+        return r?.keys || [];
+      }
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!prefix || k.startsWith(prefix)) keys.push(k);
+      }
+      return keys;
+    } catch {
+      return [];
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+const hk = (r, c) => `${r},${c}`;
+const hp = (r, c) => ({
+  x: BP + c * HS,
+  y: BP + r * HS
+});
+const coord = (r, c) => `${String.fromCharCode(65 + r % 26)}${c + 1}`;
+
+// ─── Union-Find for net detection ───
+class UnionFind {
+  constructor() {
+    this.parent = {};
+    this.rank = {};
+  }
+  find(x) {
+    if (!this.parent[x]) {
+      this.parent[x] = x;
+      this.rank[x] = 0;
+    }
+    if (this.parent[x] !== x) this.parent[x] = this.find(this.parent[x]);
+    return this.parent[x];
+  }
+  union(a, b) {
+    const ra = this.find(a),
+      rb = this.find(b);
+    if (ra === rb) return;
+    if ((this.rank[ra] || 0) < (this.rank[rb] || 0)) this.parent[ra] = rb;else if ((this.rank[ra] || 0) > (this.rank[rb] || 0)) this.parent[rb] = ra;else {
+      this.parent[rb] = ra;
+      this.rank[ra] = (this.rank[ra] || 0) + 1;
+    }
+  }
+}
+function detectNets(components, board) {
+  const uf = new UnionFind();
+  components.forEach(c => {
+    if (c.from && c.to) {
+      uf.union(hk(c.from.r, c.from.c), hk(c.to.r, c.to.c));
+    }
+    if (c.type === "library" && c.pins) {
+      // Library components: connect based on internal connections if any
+      // For now, each pin is its own node unless explicitly wired
+    }
+  });
+  // Breadboard auto-connections
+  if (board.type === "breadboard") {
+    for (let c = 0; c < board.cols; c++) {
+      // Power rails (connected horizontally in groups)
+      (board.powerRows || []).forEach(pr => {
+        const grp = Math.floor(c / (board.groupSize || 5));
+        const base = grp * (board.groupSize || 5);
+        for (let cc = base; cc < Math.min(base + (board.groupSize || 5), board.cols); cc++) {
+          if (cc !== c) uf.union(hk(pr, c), hk(pr, cc));
+        }
+      });
+      // Main columns (connected vertically in groups of 5)
+      const mainRows = [];
+      for (let r = 0; r < board.rows; r++) {
+        if (!(board.powerRows || []).includes(r) && r !== board.gapAfterRow) mainRows.push(r);
+      }
+      const topGroup = mainRows.filter(r => r < (board.gapAfterRow || 7));
+      const bottomGroup = mainRows.filter(r => r > (board.gapAfterRow || 7));
+      [topGroup, bottomGroup].forEach(group => {
+        for (let i = 1; i < group.length; i++) {
+          uf.union(hk(group[0], c), hk(group[i], c));
+        }
+      });
+    }
+  }
+  // Build net map
+  const nets = {};
+  const allHoles = new Set();
+  components.forEach(c => {
+    if (c.from) {
+      allHoles.add(hk(c.from.r, c.from.c));
+      allHoles.add(hk(c.to.r, c.to.c));
+    }
+  });
+  const NET_COLORS = ["#ff6b6b", "#4ecdc4", "#45b7d1", "#f9ca24", "#a29bfe", "#fd79a8", "#00b894", "#e17055", "#6c5ce7", "#81ecec", "#fab1a0", "#74b9ff"];
+  let netIdx = 0;
+  allHoles.forEach(h => {
+    const root = uf.find(h);
+    if (!nets[root]) nets[root] = {
+      color: NET_COLORS[netIdx++ % NET_COLORS.length],
+      holes: []
+    };
+    nets[root].holes.push(h);
+  });
+  return {
+    uf,
+    nets
+  };
+}
+function detectConflicts(components) {
+  // Find holes connected to multiple different colored wires
+  const holeWires = {};
+  components.forEach((c, i) => {
+    if (c.from && c.to) {
+      [hk(c.from.r, c.from.c), hk(c.to.r, c.to.c)].forEach(h => {
+        if (!holeWires[h]) holeWires[h] = new Set();
+        holeWires[h].add(c.color);
+      });
+    }
+  });
+  const conflicts = {};
+  Object.entries(holeWires).forEach(([h, colors]) => {
+    if (colors.size > 1) conflicts[h] = true;
+  });
+  return conflicts;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRINT HTML GENERATOR
+// ═══════════════════════════════════════════════════════════════════
+function generatePrintHTML(name, board, components, holeColors, customLib) {
+  const svgW = BP * 2 + (board.cols - 1) * HS,
+    svgH = BP * 2 + (board.rows - 1) * HS;
+  let holes = "",
+    labels = "",
+    comps = "";
+  for (let r = 0; r < board.rows; r++) for (let c = 0; c < board.cols; c++) {
+    const {
+      x,
+      y
+    } = hp(r, c);
+    const k = hk(r, c);
+    const hc = holeColors[k];
+    holes += `<circle cx="${x}" cy="${y}" r="${PR}" fill="#ddd" stroke="#bbb" stroke-width="0.5"/>`;
+    holes += `<circle cx="${x}" cy="${y}" r="${HR}" fill="${hc || "#fff"}" stroke="${hc || "#999"}" stroke-width="${hc ? 1.5 : 0.5}"/>`;
+  }
+  for (let c = 0; c < board.cols; c++) {
+    const {
+      x
+    } = hp(0, c);
+    labels += `<text x="${x}" y="10" text-anchor="middle" font-size="7" fill="#666" font-family="monospace">${c + 1}</text>`;
+  }
+  for (let r = 0; r < board.rows; r++) {
+    const {
+      y
+    } = hp(r, 0);
+    labels += `<text x="7" y="${y + 3}" text-anchor="middle" font-size="7" fill="#666" font-family="monospace">${String.fromCharCode(65 + r)}</text>`;
+  }
+  components.forEach(comp => {
+    if (comp.type === "wire" || comp.type === "jumper") {
+      const f = hp(comp.from.r, comp.from.c),
+        t = hp(comp.to.r, comp.to.c);
+      if (comp.type === "jumper") {
+        const mx = (f.x + t.x) / 2,
+          my = Math.min(f.y, t.y) - 14;
+        comps += `<path d="M${f.x},${f.y} Q${mx},${my} ${t.x},${t.y}" stroke="${comp.color}" stroke-width="2" fill="none" stroke-dasharray="4,3"/>`;
+      } else comps += `<line x1="${f.x}" y1="${f.y}" x2="${t.x}" y2="${t.y}" stroke="${comp.color}" stroke-width="2.5" stroke-linecap="round"/>`;
+      comps += `<circle cx="${f.x}" cy="${f.y}" r="2.5" fill="${comp.color}"/><circle cx="${t.x}" cy="${t.y}" r="2.5" fill="${comp.color}"/>`;
+    } else if (["resistor", "capacitor", "led", "diode"].includes(comp.type)) {
+      const f = hp(comp.from.r, comp.from.c),
+        t = hp(comp.to.r, comp.to.c);
+      const mx = (f.x + t.x) / 2,
+        my = (f.y + t.y) / 2;
+      comps += `<line x1="${f.x}" y1="${f.y}" x2="${t.x}" y2="${t.y}" stroke="#888" stroke-width="1.5"/>`;
+      if (comp.type === "resistor") {
+        const dx = t.x - f.x,
+          dy = t.y - f.y,
+          len = Math.sqrt(dx * dx + dy * dy),
+          bl = Math.min(len * 0.5, 20),
+          ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        comps += `<rect x="${mx - bl / 2}" y="${my - 4}" width="${bl}" height="8" rx="1.5" fill="#d4a574" stroke="#8B6914" stroke-width="1" transform="rotate(${ang},${mx},${my})"/>`;
+      } else if (comp.type === "led") {
+        comps += `<circle cx="${mx}" cy="${my}" r="5" fill="${comp.color}" opacity="0.6" stroke="${comp.color}"/>`;
+      } else if (comp.type === "diode") {
+        comps += `<polygon points="${mx - 4},${my - 4} ${mx + 4},${my} ${mx - 4},${my + 4}" fill="#333" stroke="#666" stroke-width="0.5"/>`;
+      } else {
+        comps += `<line x1="${mx - 3}" y1="${my - 5}" x2="${mx - 3}" y2="${my + 5}" stroke="#4a90d9" stroke-width="2.5"/><line x1="${mx + 3}" y1="${my - 5}" x2="${mx + 3}" y2="${my + 5}" stroke="#4a90d9" stroke-width="2.5"/>`;
+      }
+      comps += `<text x="${mx}" y="${my - 9}" text-anchor="middle" font-size="7" fill="#333" font-family="monospace" font-weight="bold">${comp.label || ""}</text>`;
+    } else if (comp.type === "ic") {
+      const {
+        x: ox,
+        y: oy
+      } = hp(comp.origin.r, comp.origin.c);
+      const w = (comp.w - 1) * HS,
+        h = (comp.h - 1) * HS;
+      comps += `<rect x="${ox - 5}" y="${oy - 5}" width="${w + 10}" height="${h + 10}" rx="2" fill="#e8e8e8" stroke="#333" stroke-width="1.2"/>`;
+      comps += `<text x="${ox + w / 2}" y="${oy + h / 2 + 3}" text-anchor="middle" font-size="9" fill="#333" font-family="monospace" font-weight="bold">${comp.label || "IC"}</text>`;
+    } else if (comp.type === "header") {
+      for (let i = 0; i < comp.len; i++) {
+        const pr = comp.origin.r + (comp.dir === "v" ? i : 0),
+          pc = comp.origin.c + (comp.dir === "h" ? i : 0);
+        if (pr >= board.rows || pc >= board.cols) break;
+        const {
+          x,
+          y
+        } = hp(pr, pc);
+        comps += `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" rx="1" fill="#ddd" stroke="#f39c12" stroke-width="1.2"/>`;
+      }
+    } else if (comp.type === "library") {
+      const def = [...PRESET_LIBRARY, ...(customLib || [])].find(l => l.id === comp.libraryId);
+      if (def) {
+        const {
+          x: ox,
+          y: oy
+        } = hp(comp.origin.r, comp.origin.c);
+        const w = (def.w - 1) * HS,
+          h = (def.h - 1) * HS;
+        comps += `<rect x="${ox - 6}" y="${oy - 6}" width="${w + 12}" height="${h + 12}" rx="3" fill="${def.bodyColor || "#333"}" stroke="#666" stroke-width="1"/>`;
+        comps += `<text x="${ox + w / 2}" y="${oy + h / 2 + 3}" text-anchor="middle" font-size="8" fill="#fff" font-family="monospace" font-weight="bold">${comp.label || def.name}</text>`;
+      }
+    } else if (comp.type === "label") {
+      const {
+        x,
+        y
+      } = hp(comp.pos.r, comp.pos.c);
+      comps += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="9" fill="${comp.color}" font-family="monospace" font-weight="bold">${comp.text || ""}</text>`;
+    }
+  });
+  const connections = components.filter(c => c.from && c.to).map((c, i) => ({
+    i: i + 1,
+    type: TOOLS.find(t => t.id === c.type)?.label || c.type,
+    from: coord(c.from.r, c.from.c),
+    to: coord(c.to.r, c.to.c),
+    color: c.color,
+    label: c.label || "—"
+  }));
+  const placed = components.filter(c => c.origin).map((c, i) => ({
+    i: i + 1,
+    type: c.type === "library" ? PRESET_LIBRARY.find(l => l.id === c.libraryId)?.name || c.libraryId : TOOLS.find(t => t.id === c.type)?.label || c.type,
+    pos: coord(c.origin.r, c.origin.c),
+    label: c.label || "—"
+  }));
+  const bom = {};
+  components.forEach(c => {
+    const t = c.type === "library" ? PRESET_LIBRARY.find(l => l.id === c.libraryId)?.name || "Lib" : TOOLS.find(tt => tt.id === c.type)?.label || c.type;
+    if (!bom[t]) bom[t] = 0;
+    bom[t]++;
+  });
+  const now = new Date().toLocaleString("pt-PT");
+  return `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Esquema — ${name}</title>
+<style>@page{size:A4;margin:12mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:11px;line-height:1.4;padding:10px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1a6b3a;padding-bottom:8px;margin-bottom:14px}
+.hdr h1{font-size:20px;color:#1a6b3a;font-weight:800;letter-spacing:1px}.hdr .meta{text-align:right;font-size:10px;color:#666}
+.bw{text-align:center;margin:16px 0;page-break-inside:avoid}.bw svg{border:1px solid #ccc;border-radius:6px;background:#f8f8f0;max-width:100%;height:auto}
+.sec{margin-top:16px;page-break-inside:avoid}.sec h2{font-size:13px;color:#1a6b3a;border-bottom:1.5px solid #ccc;padding-bottom:3px;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+table{width:100%;border-collapse:collapse;font-size:10px}th{background:#1a6b3a;color:#fff;padding:4px 8px;text-align:left;font-weight:600}
+td{padding:3px 8px;border-bottom:1px solid #ddd}tr:nth-child(even) td{background:#f5f5f0}
+.cd{display:inline-block;width:10px;height:10px;border-radius:50%;border:1px solid #999;vertical-align:middle;margin-right:4px}
+.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}.bc{border:1px solid #ddd;border-radius:4px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center}
+.bc .t{font-weight:600}.bc .n{font-size:16px;font-weight:800;color:#1a6b3a}
+.ft{margin-top:20px;border-top:1px solid #ccc;padding-top:6px;font-size:9px;color:#999;display:flex;justify-content:space-between}
+.np{display:block}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.np{display:none!important}}</style></head>
+<body><div class="np" style="text-align:center;margin-bottom:12px"><button onclick="window.print()" style="padding:8px 28px;font-size:14px;font-weight:700;background:#1a6b3a;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-right:8px">🖨️ Imprimir</button><button onclick="window.close()" style="padding:8px 20px;font-size:14px;background:#eee;color:#333;border:1px solid #ccc;border-radius:6px;cursor:pointer">Fechar</button></div>
+<div class="hdr"><div><h1>PERFBOARD DESIGNER</h1><div style="font-size:11px;color:#444;margin-top:2px">Esquema de ligações — PCB pré-perfurada</div></div>
+<div class="meta"><div style="font-size:14px;font-weight:700;color:#333">${name}</div><div>Placa: ${board.label} (${board.cols}×${board.rows})</div><div>Componentes: ${components.length}</div><div>${now}</div></div></div>
+<div class="bw"><svg width="${Math.min(svgW, 700)}" height="${Math.round(Math.min(svgW, 700) / svgW * svgH)}" viewBox="0 0 ${svgW} ${svgH}">
+<rect width="${svgW}" height="${svgH}" rx="6" fill="#e8f0e0" stroke="#1a6b3a" stroke-width="1.5"/>${labels}${holes}${comps}</svg></div>
+${connections.length ? `<div class="sec"><h2>Tabela de Ligações</h2><table><thead><tr><th>#</th><th>Tipo</th><th>Etiq.</th><th>De</th><th>Para</th><th>Cor</th></tr></thead><tbody>${connections.map(c => `<tr><td>${c.i}</td><td>${c.type}</td><td>${c.label}</td><td><b>${c.from}</b></td><td><b>${c.to}</b></td><td><span class="cd" style="background:${c.color}"></span></td></tr>`).join("")}</tbody></table></div>` : ""}
+${placed.length ? `<div class="sec"><h2>Componentes Colocados</h2><table><thead><tr><th>#</th><th>Tipo</th><th>Etiq.</th><th>Posição</th></tr></thead><tbody>${placed.map(c => `<tr><td>${c.i}</td><td>${c.type}</td><td>${c.label}</td><td><b>${c.pos}</b></td></tr>`).join("")}</tbody></table></div>` : ""}
+<div class="sec"><h2>Lista de Material (BOM)</h2><div class="bg">${Object.entries(bom).map(([t, n]) => `<div class="bc"><span class="t">${t}</span><span class="n">×${n}</span></div>`).join("")}</div></div>
+<div class="sec"><h2>Notas</h2><div style="border:1px dashed #ccc;border-radius:4px;padding:20px;min-height:60px;color:#bbb;font-style:italic">Espaço para anotações...</div></div>
+<div class="ft"><span>Perfboard Designer — ES/3 Prof. Dr. Flávio F. Pinto Resende</span><span>${now}</span></div></body></html>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════
+const PerfboardDesigner = function PerfboardDesigner() {
+  // ─── Board & tool state ───
+  const [boardIdx, setBoardIdx] = useState(3);
+  const [customBoards, setCustomBoards] = useState([]);
+  const [showBoardCreator, setShowBoardCreator] = useState(false);
+  const [newBoardLabel, setNewBoardLabel] = useState("");
+  const [newBoardCols, setNewBoardCols] = useState(20);
+  const [newBoardRows, setNewBoardRows] = useState(10);
+  const [newBoardType, setNewBoardType] = useState("perfboard");
+  const allBoards = useMemo(() => [...ALL_BOARDS, ...customBoards], [customBoards]);
+  const board = allBoards[boardIdx] || ALL_BOARDS[3];
+  const [tool, setTool] = useState("wire");
+  const [color, setColor] = useState(COLORS[0]);
+  const [components, setComponents] = useState([]);
+  const [holeColors, setHoleColors] = useState({});
+  const [wireStart, setWireStart] = useState(null);
+  const [hoverHole, setHoverHole] = useState(null);
+
+  // Tool options
+  const [icWidth, setIcWidth] = useState(4);
+  const [icHeight, setIcHeight] = useState(2);
+  const [headerLen, setHeaderLen] = useState(4);
+  const [headerDir, setHeaderDir] = useState("h");
+  const [labelText, setLabelText] = useState("R1");
+  const [selectedLibComp, setSelectedLibComp] = useState(null);
+
+  // View
+  const [showBack, setShowBack] = useState(false);
+  const [dualView, setDualView] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [showNets, setShowNets] = useState(false);
+  const [showConflicts, setShowConflicts] = useState(true);
+  const [bgImage, setBgImage] = useState(null);
+  const [bgOpacity, setBgOpacity] = useState(0.2);
+
+  // Editing
+  const [history, setHistory] = useState([]);
+  const [selectedComp, setSelectedComp] = useState(null);
+  const [dragging, setDragging] = useState(null);
+  const [editingLabel, setEditingLabel] = useState(null);
+  const [editText, setEditText] = useState("");
+
+  // Project
+  const [projectName, setProjectName] = useState("Sem título");
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [savedProjects, setSavedProjects] = useState([]);
+  const [saveStatus, setSaveStatus] = useState(null);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  // Library / Custom components
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [showCreator, setShowCreator] = useState(false);
+  const [customLibrary, setCustomLibrary] = useState([]);
+  const [creatorName, setCreatorName] = useState("");
+  const [creatorW, setCreatorW] = useState(4);
+  const [creatorH, setCreatorH] = useState(2);
+  const [creatorColor, setCreatorColor] = useState("#444");
+  const [creatorPins, setCreatorPins] = useState({});
+  const [creatorCat, setCreatorCat] = useState("Personalizado");
+  const svgRef = useRef(null);
+  const svgBackRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const bgInputRef = useRef(null);
+  const editInputRef = useRef(null);
+  const canvasRef = useRef(null);
+  const svgW = BP * 2 + (board.cols - 1) * HS;
+  const svgH = BP * 2 + (board.rows - 1) * HS;
+
+  // ─── Load custom library + custom boards on mount ───
+  useEffect(() => {
+    (async () => {
+      const data = await store.get("perfboard_custom_library");
+      if (data) try {
+        setCustomLibrary(JSON.parse(data));
+      } catch {}
+      const boards = await store.get("perfboard_custom_boards");
+      if (boards) try {
+        setCustomBoards(JSON.parse(boards));
+      } catch {}
+    })();
+  }, []);
+  const saveCustomLib = async lib => {
+    setCustomLibrary(lib);
+    await store.set("perfboard_custom_library", JSON.stringify(lib));
+  };
+  const saveCustomBoards = async boards => {
+    setCustomBoards(boards);
+    await store.set("perfboard_custom_boards", JSON.stringify(boards));
+  };
+  const createCustomBoard = async () => {
+    const c = Math.max(2, Math.min(80, newBoardCols));
+    const r = Math.max(2, Math.min(50, newBoardRows));
+    const label = newBoardLabel.trim() || `${c}×${r}`;
+    const id = `custom_${Date.now()}`;
+    const nb = {
+      id,
+      label,
+      cols: c,
+      rows: r,
+      type: newBoardType
+    };
+    if (newBoardType === "breadboard") {
+      nb.powerRows = [0, 1, r - 2, r - 1];
+      nb.gapAfterRow = Math.floor(r / 2);
+      nb.groupSize = 5;
+    }
+    const boards = [...customBoards, nb];
+    await saveCustomBoards(boards);
+    setBoardIdx(ALL_BOARDS.length + boards.length - 1);
+    setComponents([]);
+    setHoleColors({});
+    setWireStart(null);
+    setShowBoardCreator(false);
+  };
+  const deleteCustomBoard = async id => {
+    await saveCustomBoards(customBoards.filter(b => b.id !== id));
+    if (boardIdx >= ALL_BOARDS.length) setBoardIdx(3);
+  };
+
+  // ─── Fit to screen ───
+  const fitToScreen = useCallback(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const cw = el.clientWidth - (dualView ? 30 : 40);
+    const ch = el.clientHeight - 80;
+    const effectiveW = dualView ? svgW * 2 + 20 : svgW;
+    const zx = cw / effectiveW;
+    const zy = ch / svgH;
+    setZoom(Math.max(0.2, Math.min(zx, zy, 3)));
+  }, [svgW, svgH, dualView]);
+
+  // Auto-fit on mount, board change, and window resize
+  useEffect(() => {
+    const timer = setTimeout(fitToScreen, 150);
+    const handleResize = () => {
+      clearTimeout(timer);
+      setTimeout(fitToScreen, 100);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [fitToScreen, boardIdx]);
+
+  // ─── Net detection (memoized) ───
+  const {
+    nets,
+    conflicts
+  } = useMemo(() => {
+    const n = showNets ? detectNets(components, board) : {
+      nets: {}
+    };
+    const c = showConflicts ? detectConflicts(components) : {};
+    return {
+      nets: n.nets,
+      conflicts: c
+    };
+  }, [components, board, showNets, showConflicts]);
+
+  // ─── History ───
+  const pushHistory = useCallback(() => {
+    setHistory(h => [...h.slice(-40), {
+      components: JSON.parse(JSON.stringify(components)),
+      holeColors: {
+        ...holeColors
+      }
+    }]);
+  }, [components, holeColors]);
+  const undo = useCallback(() => {
+    if (!history.length) return;
+    const prev = history[history.length - 1];
+    setComponents(prev.components);
+    setHoleColors(prev.holeColors);
+    setHistory(h => h.slice(0, -1));
+    setSelectedComp(null);
+  }, [history]);
+
+  // ─── Save / Load ───
+  const saveToStorage = async n => {
+    setSaveStatus("saving");
+    const k = `perfboard:${(n || projectName).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const ok = await store.set(k, JSON.stringify({
+      projectName: n || projectName,
+      boardIdx,
+      components,
+      holeColors,
+      savedAt: new Date().toISOString()
+    }));
+    setSaveStatus(ok ? "saved" : "error");
+    setTimeout(() => {
+      setSaveStatus(null);
+      setShowSaveModal(false);
+    }, 1300);
+  };
+  const loadProjectList = async () => {
+    setLoadingProjects(true);
+    const keys = await store.list("perfboard:");
+    const projects = [];
+    for (const k of keys) {
+      const v = await store.get(k);
+      if (v) try {
+        const d = JSON.parse(v);
+        projects.push({
+          key: k,
+          name: d.projectName || k.replace("perfboard:", ""),
+          savedAt: d.savedAt,
+          boardIdx: d.boardIdx,
+          count: d.components?.length || 0
+        });
+      } catch {}
+    }
+    setSavedProjects(projects.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || "")));
+    setLoadingProjects(false);
+    setShowLoadModal(true);
+  };
+  const loadFromStorage = async key => {
+    const v = await store.get(key);
+    if (v) {
+      const d = JSON.parse(v);
+      setBoardIdx(d.boardIdx ?? 3);
+      setComponents(d.components || []);
+      setHoleColors(d.holeColors || {});
+      setProjectName(d.projectName || "");
+      setHistory([]);
+      setSelectedComp(null);
+      setWireStart(null);
+    }
+    setShowLoadModal(false);
+  };
+
+  // ─── File export/import ───
+  const exportFile = () => {
+    const blob = new Blob([JSON.stringify({
+      _format: "perfboard-designer",
+      _version: 2,
+      projectName,
+      boardIdx,
+      components,
+      holeColors,
+      customLibrary,
+      savedAt: new Date().toISOString()
+    }, null, 2)], {
+      type: "application/json"
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${projectName.replace(/\s/g, "_")}.perfboard.json`;
+    a.click();
+    setSaveStatus("saved");
+    setTimeout(() => setSaveStatus(null), 1500);
+  };
+  const importFile = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.components) {
+          pushHistory();
+          setBoardIdx(d.boardIdx ?? 3);
+          setComponents(d.components || []);
+          setHoleColors(d.holeColors || {});
+          setProjectName(d.projectName || file.name.replace(/\..*$/, ""));
+          if (d.customLibrary?.length) {
+            saveCustomLib([...customLibrary, ...d.customLibrary.filter(c => !customLibrary.find(e => e.id === c.id))]);
+          }
+          setHistory([]);
+          setSelectedComp(null);
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus(null), 1500);
+        }
+      } catch {
+        alert("Ficheiro inválido.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // ─── Background image ───
+  const handleBgImage = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setBgImage(ev.target.result);
+    reader.readAsDataURL(file);
+    if (bgInputRef.current) bgInputRef.current.value = "";
+  };
+
+  // ─── Print ───
+  const handlePrint = () => {
+    const html = generatePrintHTML(projectName, board, components, holeColors, customLibrary);
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 500);
+    }
+  };
+
+  // ─── SVG Interaction ───
+  const getHole = useCallback(e => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = (clientX - rect.left) / zoom,
+      y = (clientY - rect.top) / zoom;
+    const c = Math.round((x - BP) / HS),
+      r = Math.round((y - BP) / HS);
+    if (r < 0 || r >= board.rows || c < 0 || c >= board.cols) return null;
+    return {
+      r,
+      c
+    };
+  }, [zoom, board]);
+  const handleSvgClick = e => {
+    if (dragging) return;
+    const h = getHole(e);
+    if (!h) return;
+
+    // Double-click = edit label
+    if (e.detail === 2 && tool === "select") {
+      const idx = findCompAt(h);
+      if (idx >= 0) {
+        const c = components[idx];
+        setEditingLabel(idx);
+        setEditText(c.label || c.text || "");
+        setTimeout(() => editInputRef.current?.focus(), 50);
+        return;
+      }
+    }
+    if (tool === "select") {
+      const idx = findCompAt(h);
+      setSelectedComp(idx >= 0 ? idx : null);
+      return;
+    }
+    const twoClick = ["wire", "jumper", "resistor", "capacitor", "led", "diode"];
+    if (twoClick.includes(tool)) {
+      if (!wireStart) {
+        setWireStart(h);
+      } else {
+        if (wireStart.r === h.r && wireStart.c === h.c) {
+          setWireStart(null);
+          return;
+        }
+        pushHistory();
+        const lbl = tool === "resistor" ? "R" : tool === "capacitor" ? "C" : tool === "led" ? "LED" : tool === "diode" ? "D" : "";
+        setComponents(cs => [...cs, {
+          type: tool,
+          from: wireStart,
+          to: h,
+          color,
+          label: lbl
+        }]);
+        setWireStart(null);
+      }
+    } else if (tool === "ic") {
+      if (h.r + icHeight - 1 < board.rows && h.c + icWidth - 1 < board.cols) {
+        pushHistory();
+        setComponents(cs => [...cs, {
+          type: "ic",
+          origin: h,
+          w: icWidth,
+          h: icHeight,
+          color: "#34495e",
+          label: "IC"
+        }]);
+      }
+    } else if (tool === "header") {
+      pushHistory();
+      setComponents(cs => [...cs, {
+        type: "header",
+        origin: h,
+        len: headerLen,
+        dir: headerDir,
+        color: "#f39c12"
+      }]);
+    } else if (tool === "label") {
+      pushHistory();
+      setComponents(cs => [...cs, {
+        type: "label",
+        pos: h,
+        text: labelText,
+        color
+      }]);
+    } else if (tool === "library" && selectedLibComp) {
+      const def = [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === selectedLibComp);
+      if (def && h.r + def.h - 1 < board.rows && h.c + def.w - 1 < board.cols) {
+        pushHistory();
+        setComponents(cs => [...cs, {
+          type: "library",
+          libraryId: def.id,
+          origin: h,
+          label: def.name,
+          pins: def.pins
+        }]);
+      }
+    }
+    if (tool !== "label" && tool !== "select") setHoleColors(hc => ({
+      ...hc,
+      [hk(h.r, h.c)]: color
+    }));
+  };
+  const findCompAt = h => {
+    return components.findIndex(c => {
+      if (c.from && c.to) return Math.abs(c.from.r - h.r) + Math.abs(c.from.c - h.c) <= 1 || Math.abs(c.to.r - h.r) + Math.abs(c.to.c - h.c) <= 1;
+      if (c.origin) {
+        const w = c.w || (c.type === "library" ? [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === c.libraryId)?.w || 1 : c.len || 1);
+        const ht = c.h || (c.type === "library" ? [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === c.libraryId)?.h || 1 : 1);
+        const cw = c.dir === "v" ? 1 : w,
+          ch = c.dir === "v" ? c.len || ht : ht;
+        return h.r >= c.origin.r && h.r <= c.origin.r + ch - 1 && h.c >= c.origin.c && h.c <= c.origin.c + cw - 1;
+      }
+      if (c.pos) return c.pos.r === h.r && c.pos.c === h.c;
+      return false;
+    });
+  };
+
+  // ─── Drag ───
+  const handleDragStart = e => {
+    if (tool !== "select" || selectedComp === null) return;
+    const h = getHole(e);
+    if (!h) return;
+    const c = components[selectedComp];
+    const origin = c.origin || c.from || c.pos;
+    if (!origin) return;
+    setDragging({
+      idx: selectedComp,
+      offsetR: h.r - origin.r,
+      offsetC: h.c - origin.c
+    });
+    e.preventDefault?.();
+  };
+  const handleDragMove = e => {
+    const h = getHole(e);
+    setHoverHole(h);
+    if (!dragging || !h) return;
+    e.preventDefault?.();
+  };
+  const handleDragEnd = e => {
+    if (!dragging) return;
+    const h = getHole(e) || hoverHole;
+    if (h) {
+      const newR = h.r - dragging.offsetR,
+        newC = h.c - dragging.offsetC;
+      if (newR >= 0 && newC >= 0 && newR < board.rows && newC < board.cols) {
+        pushHistory();
+        setComponents(cs => cs.map((c, i) => {
+          if (i !== dragging.idx) return c;
+          const nc = {
+            ...c
+          };
+          if (nc.origin) {
+            nc.origin = {
+              r: newR,
+              c: newC
+            };
+          } else if (nc.from && nc.to) {
+            const dr = newR - nc.from.r,
+              dc = newC - nc.from.c;
+            nc.from = {
+              r: nc.from.r + dr,
+              c: nc.from.c + dc
+            };
+            nc.to = {
+              r: nc.to.r + dr,
+              c: nc.to.c + dc
+            };
+          } else if (nc.pos) {
+            nc.pos = {
+              r: newR,
+              c: newC
+            };
+          }
+          return nc;
+        }));
+      }
+    }
+    setDragging(null);
+  };
+
+  // ─── Inline label editing ───
+  const commitLabel = () => {
+    if (editingLabel === null) return;
+    pushHistory();
+    setComponents(cs => cs.map((c, i) => {
+      if (i !== editingLabel) return c;
+      const nc = {
+        ...c
+      };
+      if (nc.type === "label") nc.text = editText;else nc.label = editText;
+      return nc;
+    }));
+    setEditingLabel(null);
+  };
+
+  // ─── Custom Component Creator ───
+  const toggleCreatorPin = (r, c) => {
+    const k = hk(r, c);
+    setCreatorPins(p => {
+      const np = {
+        ...p
+      };
+      if (np[k]) delete np[k];else np[k] = true;
+      return np;
+    });
+  };
+  const saveCustomComponent = async () => {
+    if (!creatorName.trim()) return;
+    const pins = Object.keys(creatorPins).map(k => {
+      const [r, c] = k.split(",").map(Number);
+      return {
+        r,
+        c
+      };
+    });
+    if (!pins.length) {
+      alert("Adicione pelo menos um pino.");
+      return;
+    }
+    const id = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const comp = {
+      id,
+      name: creatorName.trim(),
+      cat: creatorCat,
+      w: creatorW,
+      h: creatorH,
+      bodyColor: creatorColor,
+      pins
+    };
+    const lib = [...customLibrary, comp];
+    await saveCustomLib(lib);
+    setShowCreator(false);
+    setCreatorName("");
+    setCreatorPins({});
+  };
+  const deleteCustomComp = async id => {
+    await saveCustomLib(customLibrary.filter(c => c.id !== id));
+  };
+
+  // ─── Keyboard ───
+  useEffect(() => {
+    const handle = e => {
+      if (editingLabel !== null) {
+        if (e.key === "Enter") commitLabel();
+        if (e.key === "Escape") {
+          setEditingLabel(null);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setWireStart(null);
+        setSelectedComp(null);
+        setShowSaveModal(false);
+        setShowLoadModal(false);
+        setShowLibrary(false);
+        setShowCreator(false);
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedComp !== null && !showSaveModal && !showLoadModal) {
+        pushHistory();
+        setComponents(cs => cs.filter((_, i) => i !== selectedComp));
+        setSelectedComp(null);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        saveToStorage();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        handlePrint();
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  });
+
+  // ─── Rendering ───
+  const renderBoard = (isBack = false, ref = null) => {
+    const holes = [],
+      axisLabels = [];
+    const isBB = board.type === "breadboard";
+    for (let c = 0; c < board.cols; c++) {
+      const {
+        x
+      } = hp(0, c);
+      axisLabels.push(/*#__PURE__*/React.createElement("text", {
+        key: `c${c}`,
+        x: isBack ? svgW - x : x,
+        y: 10,
+        textAnchor: "middle",
+        fontSize: 7,
+        fill: "#778",
+        fontFamily: "monospace"
+      }, c + 1));
+    }
+    for (let r = 0; r < board.rows; r++) {
+      const {
+        y
+      } = hp(r, 0);
+      axisLabels.push(/*#__PURE__*/React.createElement("text", {
+        key: `r${r}`,
+        x: isBack ? svgW - 7 : 7,
+        y: y + 3,
+        textAnchor: "middle",
+        fontSize: 7,
+        fill: "#778",
+        fontFamily: "monospace"
+      }, String.fromCharCode(65 + r)));
+    }
+    for (let r = 0; r < board.rows; r++) for (let c = 0; c < board.cols; c++) {
+      const {
+        x,
+        y
+      } = hp(r, c);
+      const px = isBack ? svgW - x : x;
+      const k = hk(r, c);
+      const hc = holeColors[k];
+      const isPower = isBB && (board.powerRows || []).includes(r);
+      const isGap = isBB && r === (board.gapAfterRow || 7);
+      if (isGap) continue;
+      const padFill = isBack ? "#c9a84c" : isPower ? r < 2 ? "#cc3333" : "#3333cc" : isBB ? "#e8dcc8" : "#1a472a";
+      const padStroke = isBack ? "#a8893a" : "#0f3520";
+
+      // Net highlight
+      let netColor = null;
+      if (showNets) {
+        Object.values(nets).forEach(n => {
+          if (n.holes.includes(k)) netColor = n.color;
+        });
+      }
+      const conflictHere = showConflicts && conflicts[k];
+      holes.push(/*#__PURE__*/React.createElement("g", {
+        key: `${r},${c},${isBack ? 1 : 0}`
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: px,
+        cy: y,
+        r: PR,
+        fill: padFill,
+        stroke: padStroke,
+        strokeWidth: 0.7,
+        opacity: 0.5
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: px,
+        cy: y,
+        r: HR,
+        fill: netColor || hc || (isBack ? "#1a1a1a" : "#0a0a0a"),
+        stroke: netColor || hc || "#333",
+        strokeWidth: hc || netColor ? 1.5 : 0.5
+      }), conflictHere && /*#__PURE__*/React.createElement("circle", {
+        cx: px,
+        cy: y,
+        r: PR + 3,
+        fill: "none",
+        stroke: "#ff0",
+        strokeWidth: 2,
+        strokeDasharray: "3,2",
+        opacity: 0.9
+      })));
+    }
+    return /*#__PURE__*/React.createElement("svg", {
+      ref: ref,
+      width: svgW * zoom * (dualView ? 0.5 : 1),
+      height: svgH * zoom * (dualView ? 0.5 : 1),
+      viewBox: `0 0 ${svgW} ${svgH}`,
+      onClick: isBack ? undefined : handleSvgClick,
+      onMouseDown: isBack ? undefined : handleDragStart,
+      onMouseMove: isBack ? undefined : handleDragMove,
+      onMouseUp: isBack ? undefined : handleDragEnd,
+      onTouchStart: isBack ? undefined : e => {
+        handleDragStart(e);
+      },
+      onTouchMove: isBack ? undefined : e => {
+        handleDragMove(e);
+      },
+      onTouchEnd: isBack ? undefined : handleDragEnd,
+      onMouseLeave: () => {
+        setHoverHole(null);
+        if (!isBack) handleDragEnd();
+      },
+      style: {
+        cursor: tool === "select" ? dragging ? "grabbing" : "default" : "crosshair",
+        borderRadius: 8,
+        boxShadow: "0 0 30px rgba(34,197,94,0.07)",
+        touchAction: "none"
+      }
+    }, /*#__PURE__*/React.createElement("rect", {
+      width: svgW,
+      height: svgH,
+      rx: 6,
+      fill: isBack ? "#1a5c2a" : isBB ? "#e8dcc0" : "#1a6b3a",
+      stroke: isBB ? "#a89070" : "#22c55e",
+      strokeWidth: 1.5,
+      opacity: 0.92
+    }), bgImage && !isBack && /*#__PURE__*/React.createElement("image", {
+      href: bgImage,
+      x: 0,
+      y: 0,
+      width: svgW,
+      height: svgH,
+      opacity: bgOpacity,
+      preserveAspectRatio: "xMidYMid meet"
+    }), isBB && /*#__PURE__*/React.createElement("rect", {
+      x: BP - 4,
+      y: hp(board.gapAfterRow || 7, 0).y - HS / 2 + 2,
+      width: svgW - BP * 2 + 8,
+      height: HS - 4,
+      rx: 2,
+      fill: isBack ? "#0a3a1a" : "#b8a888",
+      opacity: 0.5
+    }), axisLabels, holes, !isBack && renderComponents(), !isBack && renderWirePreview(), !isBack && hoverHole && !dragging && /*#__PURE__*/React.createElement("circle", {
+      cx: hp(hoverHole.r, hoverHole.c).x,
+      cy: hp(hoverHole.r, hoverHole.c).y,
+      r: PR + 2,
+      fill: "none",
+      stroke: "#fff",
+      strokeWidth: 1.2,
+      opacity: 0.5
+    }), isBack && renderComponentsBack());
+  };
+  const renderComponents = () => components.map((comp, idx) => {
+    const isSel = selectedComp === idx;
+    const glow = isSel ? "drop-shadow(0 0 4px #fff)" : "none";
+    if (comp.type === "wire") {
+      const f = hp(comp.from.r, comp.from.c),
+        t = hp(comp.to.r, comp.to.c);
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx,
+        style: {
+          filter: glow
+        }
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: f.x,
+        y1: f.y,
+        x2: t.x,
+        y2: t.y,
+        stroke: comp.color,
+        strokeWidth: 2.5,
+        strokeLinecap: "round"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: f.x,
+        cy: f.y,
+        r: 2.5,
+        fill: comp.color
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: t.x,
+        cy: t.y,
+        r: 2.5,
+        fill: comp.color
+      }));
+    }
+    if (comp.type === "jumper") {
+      const f = hp(comp.from.r, comp.from.c),
+        t = hp(comp.to.r, comp.to.c);
+      const mx = (f.x + t.x) / 2,
+        my = Math.min(f.y, t.y) - 14;
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx,
+        style: {
+          filter: glow
+        }
+      }, /*#__PURE__*/React.createElement("path", {
+        d: `M${f.x},${f.y} Q${mx},${my} ${t.x},${t.y}`,
+        stroke: comp.color,
+        strokeWidth: 2,
+        fill: "none",
+        strokeDasharray: "4,3"
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: f.x,
+        cy: f.y,
+        r: 2.5,
+        fill: comp.color
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: t.x,
+        cy: t.y,
+        r: 2.5,
+        fill: comp.color
+      }));
+    }
+    if (["resistor", "capacitor", "led", "diode"].includes(comp.type)) {
+      const f = hp(comp.from.r, comp.from.c),
+        t = hp(comp.to.r, comp.to.c);
+      const mx = (f.x + t.x) / 2,
+        my = (f.y + t.y) / 2;
+      const dx = t.x - f.x,
+        dy = t.y - f.y,
+        len = Math.sqrt(dx * dx + dy * dy);
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx,
+        style: {
+          filter: glow
+        }
+      }, /*#__PURE__*/React.createElement("line", {
+        x1: f.x,
+        y1: f.y,
+        x2: t.x,
+        y2: t.y,
+        stroke: "#888",
+        strokeWidth: 1.5
+      }), comp.type === "resistor" && (() => {
+        const bl = Math.min(len * 0.5, 20),
+          ang = Math.atan2(dy, dx) * 180 / Math.PI;
+        return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+          x: mx - bl / 2,
+          y: my - 4,
+          width: bl,
+          height: 8,
+          rx: 1.5,
+          fill: "#d4a574",
+          stroke: "#8B6914",
+          strokeWidth: 1,
+          transform: `rotate(${ang},${mx},${my})`
+        }), [0.25, 0.4, 0.55, 0.75].map((p, i) => {
+          const bx1 = mx - dx / len * bl / 2,
+            by1 = my - dy / len * bl / 2,
+            bx2 = mx + dx / len * bl / 2,
+            by2 = my + dy / len * bl / 2;
+          return /*#__PURE__*/React.createElement("circle", {
+            key: i,
+            cx: bx1 + (bx2 - bx1) * p,
+            cy: by1 + (by2 - by1) * p,
+            r: 1.2,
+            fill: ["#8B0000", "#000", "#f90", "#DAA520"][i]
+          });
+        }));
+      })(), comp.type === "capacitor" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("line", {
+        x1: mx - 3,
+        y1: my - 5,
+        x2: mx - 3,
+        y2: my + 5,
+        stroke: "#4a90d9",
+        strokeWidth: 2.5
+      }), /*#__PURE__*/React.createElement("line", {
+        x1: mx + 3,
+        y1: my - 5,
+        x2: mx + 3,
+        y2: my + 5,
+        stroke: "#4a90d9",
+        strokeWidth: 2.5
+      })), comp.type === "led" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("circle", {
+        cx: mx,
+        cy: my,
+        r: 5,
+        fill: comp.color,
+        opacity: 0.7,
+        stroke: comp.color
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: mx - 1,
+        cy: my - 1,
+        r: 1.8,
+        fill: "#fff",
+        opacity: 0.5
+      })), comp.type === "diode" && /*#__PURE__*/React.createElement("polygon", {
+        points: `${mx - 4},${my - 4} ${mx + 4},${my} ${mx - 4},${my + 4}`,
+        fill: "#333",
+        stroke: "#888",
+        strokeWidth: 0.5
+      }), /*#__PURE__*/React.createElement("text", {
+        x: mx,
+        y: my - 9,
+        textAnchor: "middle",
+        fontSize: 7,
+        fill: comp.color,
+        fontFamily: "monospace",
+        fontWeight: "bold"
+      }, comp.label));
+    }
+    if (comp.type === "ic") {
+      const {
+        x: ox,
+        y: oy
+      } = hp(comp.origin.r, comp.origin.c);
+      const w = (comp.w - 1) * HS,
+        h = (comp.h - 1) * HS;
+      const pins = [];
+      for (let i = 0; i < comp.w; i++) {
+        const px = ox + i * HS;
+        pins.push(/*#__PURE__*/React.createElement("circle", {
+          key: `t${i}`,
+          cx: px,
+          cy: oy,
+          r: 2,
+          fill: "#ccc"
+        }), /*#__PURE__*/React.createElement("circle", {
+          key: `b${i}`,
+          cx: px,
+          cy: oy + h,
+          r: 2,
+          fill: "#ccc"
+        }));
+      }
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx,
+        style: {
+          filter: glow
+        }
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: ox - 5,
+        y: oy - 5,
+        width: w + 10,
+        height: h + 10,
+        rx: 2,
+        fill: "#1a1a2e",
+        stroke: "#555",
+        strokeWidth: 1.2
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: ox + 3,
+        cy: oy + 3,
+        r: 2.5,
+        fill: "none",
+        stroke: "#888",
+        strokeWidth: 0.8
+      }), pins, /*#__PURE__*/React.createElement("text", {
+        x: ox + w / 2,
+        y: oy + h / 2 + 3,
+        textAnchor: "middle",
+        fontSize: 9,
+        fill: "#ddd",
+        fontFamily: "monospace",
+        fontWeight: "bold"
+      }, comp.label));
+    }
+    if (comp.type === "header") {
+      const pins = [];
+      for (let i = 0; i < comp.len; i++) {
+        const pr = comp.origin.r + (comp.dir === "v" ? i : 0),
+          pc = comp.origin.c + (comp.dir === "h" ? i : 0);
+        if (pr >= board.rows || pc >= board.cols) break;
+        const {
+          x,
+          y
+        } = hp(pr, pc);
+        pins.push(/*#__PURE__*/React.createElement("rect", {
+          key: i,
+          x: x - 4,
+          y: y - 4,
+          width: 8,
+          height: 8,
+          rx: 1,
+          fill: "#222",
+          stroke: comp.color || "#f39c12",
+          strokeWidth: 1.2
+        }));
+      }
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx,
+        style: {
+          filter: glow
+        }
+      }, pins);
+    }
+    if (comp.type === "library") {
+      const def = [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === comp.libraryId);
+      if (!def) return null;
+      const {
+        x: ox,
+        y: oy
+      } = hp(comp.origin.r, comp.origin.c);
+      const w = (def.w - 1) * HS,
+        h = (def.h - 1) * HS;
+      const pins = def.pins.map((p, i) => {
+        const {
+          x,
+          y
+        } = hp(comp.origin.r + p.r, comp.origin.c + p.c);
+        return /*#__PURE__*/React.createElement("circle", {
+          key: i,
+          cx: x,
+          cy: y,
+          r: 2.2,
+          fill: "#ddd",
+          stroke: "#888",
+          strokeWidth: 0.5
+        });
+      });
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx,
+        style: {
+          filter: glow
+        }
+      }, /*#__PURE__*/React.createElement("rect", {
+        x: ox - 6,
+        y: oy - 6,
+        width: w + 12,
+        height: h + 12,
+        rx: 3,
+        fill: def.bodyColor || "#333",
+        stroke: isSel ? "#fff" : "#666",
+        strokeWidth: isSel ? 2 : 1
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: ox + 3,
+        cy: oy + 3,
+        r: 2,
+        fill: "none",
+        stroke: "#aaa",
+        strokeWidth: 0.6
+      }), pins, /*#__PURE__*/React.createElement("text", {
+        x: ox + w / 2,
+        y: oy + h / 2 + 3,
+        textAnchor: "middle",
+        fontSize: 8,
+        fill: "#eee",
+        fontFamily: "monospace",
+        fontWeight: "bold"
+      }, comp.label || def.name));
+    }
+    if (comp.type === "label") {
+      const {
+        x,
+        y
+      } = hp(comp.pos.r, comp.pos.c);
+      return /*#__PURE__*/React.createElement("text", {
+        key: idx,
+        x: x,
+        y: y - 10,
+        textAnchor: "middle",
+        fontSize: 9,
+        fill: comp.color,
+        fontFamily: "monospace",
+        fontWeight: "bold",
+        style: {
+          filter: glow
+        }
+      }, comp.text);
+    }
+    return null;
+  });
+  const renderComponentsBack = () => components.map((comp, idx) => {
+    // Mirror X for back view - show solder points
+    if (comp.from && comp.to) {
+      const f = hp(comp.from.r, comp.from.c),
+        t = hp(comp.to.r, comp.to.c);
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: svgW - f.x,
+        cy: f.y,
+        r: PR - 1,
+        fill: comp.color,
+        opacity: 0.5
+      }), /*#__PURE__*/React.createElement("circle", {
+        cx: svgW - t.x,
+        cy: t.y,
+        r: PR - 1,
+        fill: comp.color,
+        opacity: 0.5
+      }));
+    }
+    if (comp.origin) {
+      const def = comp.type === "library" ? [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === comp.libraryId) : null;
+      const pins = def ? def.pins : [];
+      if (comp.type === "ic") {
+        const ps = [];
+        for (let i = 0; i < comp.w; i++) {
+          ps.push({
+            r: 0,
+            c: i
+          }, {
+            r: comp.h - 1,
+            c: i
+          });
+        }
+        return /*#__PURE__*/React.createElement("g", {
+          key: idx
+        }, ps.map((p, i) => {
+          const {
+            x,
+            y
+          } = hp(comp.origin.r + p.r, comp.origin.c + p.c);
+          return /*#__PURE__*/React.createElement("circle", {
+            key: i,
+            cx: svgW - x,
+            cy: y,
+            r: PR - 1,
+            fill: "#c9a84c",
+            opacity: 0.6
+          });
+        }));
+      }
+      return /*#__PURE__*/React.createElement("g", {
+        key: idx
+      }, pins.map((p, i) => {
+        const {
+          x,
+          y
+        } = hp(comp.origin.r + p.r, comp.origin.c + p.c);
+        return /*#__PURE__*/React.createElement("circle", {
+          key: i,
+          cx: svgW - x,
+          cy: y,
+          r: PR - 1,
+          fill: "#c9a84c",
+          opacity: 0.6
+        });
+      }));
+    }
+    return null;
+  });
+  const renderWirePreview = () => {
+    if (!wireStart || !hoverHole) return null;
+    const f = hp(wireStart.r, wireStart.c),
+      t = hp(hoverHole.r, hoverHole.c);
+    if (tool === "jumper") {
+      const mx = (f.x + t.x) / 2,
+        my = Math.min(f.y, t.y) - 14;
+      return /*#__PURE__*/React.createElement("path", {
+        d: `M${f.x},${f.y} Q${mx},${my} ${t.x},${t.y}`,
+        stroke: color,
+        strokeWidth: 2,
+        fill: "none",
+        opacity: 0.4,
+        strokeDasharray: "4,3"
+      });
+    }
+    return /*#__PURE__*/React.createElement("line", {
+      x1: f.x,
+      y1: f.y,
+      x2: t.x,
+      y2: t.y,
+      stroke: color,
+      strokeWidth: 2,
+      opacity: 0.4,
+      strokeDasharray: "3,3"
+    });
+  };
+
+  // ─── Styles ───
+  const btn = (active, c) => ({
+    padding: "4px 7px",
+    borderRadius: 4,
+    fontSize: 10,
+    background: active ? "rgba(34,197,94,0.1)" : "#1e293b",
+    color: c || (active ? "#22c55e" : "#94a3b8"),
+    border: active ? "1px solid #22c55e" : "1px solid #334155",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    width: "100%",
+    textAlign: "left"
+  });
+  const inputS = {
+    width: "100%",
+    background: "#1e293b",
+    color: "#e2e8f0",
+    border: "1px solid #334155",
+    borderRadius: 3,
+    padding: "4px 6px",
+    fontSize: 11,
+    fontFamily: "inherit"
+  };
+  const smlInput = {
+    width: 38,
+    background: "#1e293b",
+    color: "#e2e8f0",
+    border: "1px solid #334155",
+    borderRadius: 3,
+    padding: "2px 4px",
+    fontSize: 10,
+    fontFamily: "inherit"
+  };
+  const secTitle = {
+    fontSize: 8,
+    color: "#64748b",
+    letterSpacing: 2,
+    marginBottom: 2
+  };
+  const Modal = ({
+    children,
+    onClose
+  }) => /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      zIndex: 1000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backdropFilter: "blur(4px)"
+    },
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0f1923",
+      border: "1px solid #1e3a5f",
+      borderRadius: 10,
+      minWidth: 360,
+      maxWidth: 520,
+      maxHeight: "85vh",
+      overflow: "auto",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+    },
+    onClick: e => e.stopPropagation()
+  }, children));
+  const statusText = wireStart ? `De: ${coord(wireStart.r, wireStart.c)} →` : hoverHole ? coord(hoverHole.r, hoverHole.c) : "—";
+  const allLib = [...PRESET_LIBRARY, ...customLibrary];
+  const categories = [...new Set(allLib.map(l => l.cat))];
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: "100vh",
+      background: "#0c0c14",
+      color: "#d4d4d8",
+      fontFamily: "'JetBrains Mono','Fira Code','Source Code Pro',monospace",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("style", null, `
+        .pb-sidebar::-webkit-scrollbar { width: 6px; }
+        .pb-sidebar::-webkit-scrollbar-track { background: #0a0e17; }
+        .pb-sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .pb-sidebar::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+        .pb-canvas::-webkit-scrollbar { width: 8px; height: 8px; }
+        .pb-canvas::-webkit-scrollbar-track { background: #0a0e17; }
+        .pb-canvas::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        .pb-canvas::-webkit-scrollbar-thumb:hover { background: #334155; }
+      `), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "linear-gradient(135deg,#0f1923,#152233)",
+      borderBottom: "1px solid #1e3a5f",
+      padding: "6px 12px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 5
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 26,
+      height: 26,
+      borderRadius: 5,
+      background: "linear-gradient(135deg,#22c55e,#16a34a)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 13,
+      fontWeight: 900,
+      color: "#000"
+    }
+  }, "\u229E"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: "#e2e8f0",
+      letterSpacing: 1
+    }
+  }, "PERFBOARD DESIGNER"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      letterSpacing: 2
+    }
+  }, "v2 \xB7 GitHub Pages Edition"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: projectName,
+    onChange: e => setProjectName(e.target.value),
+    style: {
+      background: "#0c0c14",
+      color: "#f59e0b",
+      border: "1px solid #334155",
+      borderRadius: 4,
+      padding: "2px 8px",
+      fontSize: 11,
+      fontWeight: 700,
+      fontFamily: "inherit",
+      width: 140,
+      textAlign: "center"
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => saveToStorage(),
+    style: {
+      ...btn(false, "#22c55e"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, saveStatus === "saving" ? "⏳" : saveStatus === "saved" ? "✓" : "💾"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowSaveModal(true),
+    style: {
+      ...btn(false, "#3b82f6"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "Guardar como"), /*#__PURE__*/React.createElement("button", {
+    onClick: loadProjectList,
+    style: {
+      ...btn(false, "#f59e0b"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "\uD83D\uDCC2 Abrir"), /*#__PURE__*/React.createElement("button", {
+    onClick: exportFile,
+    style: {
+      ...btn(false, "#9b59b6"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "\uD83D\uDCE5 Ficheiro"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => fileInputRef.current?.click(),
+    style: {
+      ...btn(false, "#e67e22"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "\uD83D\uDCE4 Abrir fich."), /*#__PURE__*/React.createElement("input", {
+    ref: fileInputRef,
+    type: "file",
+    accept: ".json",
+    onChange: importFile,
+    style: {
+      display: "none"
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#334155"
+    }
+  }, "\u2502"), allBoards.map((b, i) => /*#__PURE__*/React.createElement("button", {
+    key: i,
+    onClick: () => {
+      setBoardIdx(i);
+      setComponents([]);
+      setHoleColors({});
+      setWireStart(null);
+      setTimeout(fitToScreen, 100);
+    },
+    style: {
+      padding: "2px 6px",
+      borderRadius: 3,
+      border: "1px solid",
+      borderColor: i === boardIdx ? "#22c55e" : "#334155",
+      background: i === boardIdx ? "#22c55e22" : "#0f172a",
+      color: i === boardIdx ? "#22c55e" : "#64748b",
+      fontSize: 8,
+      fontWeight: 600,
+      cursor: "pointer",
+      fontFamily: "inherit"
+    }
+  }, b.label)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowBoardCreator(true),
+    style: {
+      padding: "2px 8px",
+      borderRadius: 3,
+      border: "1px dashed #f39c12",
+      background: "#f39c1215",
+      color: "#f39c12",
+      fontSize: 8,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontFamily: "inherit"
+    }
+  }, "\u271A Nova"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flex: "1 1 0%",
+      overflow: "hidden",
+      minHeight: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "pb-sidebar",
+    style: {
+      width: 168,
+      minWidth: 168,
+      background: "#0f1520",
+      borderRight: "1px solid #1e293b",
+      padding: "6px 5px",
+      overflowY: "auto",
+      overflowX: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      height: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "FERRAMENTAS"), TOOLS.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => {
+      setTool(t.id);
+      setWireStart(null);
+      if (t.id === "library") setShowLibrary(true);
+    },
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 5,
+      padding: "3px 5px",
+      borderRadius: 4,
+      border: tool === t.id ? "1px solid #22c55e" : "1px solid transparent",
+      background: tool === t.id ? "#22c55e12" : "transparent",
+      color: tool === t.id ? "#22c55e" : "#94a3b8",
+      cursor: "pointer",
+      fontSize: 9,
+      fontFamily: "inherit",
+      textAlign: "left",
+      width: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      width: 16,
+      textAlign: "center"
+    }
+  }, t.icon), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 600
+    }
+  }, t.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 6,
+      opacity: 0.6
+    }
+  }, t.desc)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "COR"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 2
+    }
+  }, COLORS.map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    onClick: () => setColor(c),
+    style: {
+      width: 16,
+      height: 16,
+      borderRadius: 3,
+      background: c,
+      cursor: "pointer",
+      border: color === c ? "2px solid #fff" : "2px solid #333"
+    }
+  })))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "BIBLIOTECA / COMPONENTES"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowLibrary(true),
+    style: btn(false, "#1abc9c")
+  }, "\u25EB Abrir biblioteca"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setShowCreator(true);
+      setCreatorPins({});
+      setCreatorName("");
+    },
+    style: {
+      ...btn(false, "#f39c12"),
+      fontWeight: 600
+    }
+  }, "+ Criar componente")), tool === "ic" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "CI / IC"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      fontSize: 9
+    }
+  }, /*#__PURE__*/React.createElement("label", null, "L:", /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 2,
+    max: 20,
+    value: icWidth,
+    onChange: e => setIcWidth(+e.target.value),
+    style: smlInput
+  })), /*#__PURE__*/React.createElement("label", null, "A:", /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 2,
+    max: 10,
+    value: icHeight,
+    onChange: e => setIcHeight(+e.target.value),
+    style: smlInput
+  })))), tool === "header" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "HEADER"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      fontSize: 9,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("label", null, "Pinos:", /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 1,
+    max: 40,
+    value: headerLen,
+    onChange: e => setHeaderLen(+e.target.value),
+    style: smlInput
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setHeaderDir(d => d === "h" ? "v" : "h"),
+    style: {
+      background: "#1e293b",
+      color: "#e2e8f0",
+      border: "1px solid #334155",
+      borderRadius: 3,
+      padding: "2px 6px",
+      cursor: "pointer",
+      fontSize: 8,
+      fontFamily: "inherit"
+    }
+  }, headerDir === "h" ? "H" : "V"))), tool === "label" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "ETIQUETA"), /*#__PURE__*/React.createElement("input", {
+    value: labelText,
+    onChange: e => setLabelText(e.target.value),
+    style: inputS
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "EDI\xC7\xC3O"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setTool("select");
+      setWireStart(null);
+    },
+    style: btn(tool === "select")
+  }, "\u25B9 Selecionar (dbl-click edita)"), /*#__PURE__*/React.createElement("button", {
+    onClick: undo,
+    style: {
+      ...btn(false, history.length ? "#f59e0b" : "#555")
+    }
+  }, "\u21BA Desfazer (Ctrl+Z)"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (selectedComp !== null) {
+        pushHistory();
+        setComponents(cs => cs.filter((_, i) => i !== selectedComp));
+        setSelectedComp(null);
+      }
+    },
+    style: {
+      ...btn(false, selectedComp !== null ? "#ef4444" : "#555")
+    }
+  }, "\u2715 Apagar sele\xE7\xE3o"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      pushHistory();
+      setComponents([]);
+      setHoleColors({});
+    },
+    style: {
+      ...btn(false, "#ef4444")
+    }
+  }, "\u27F3 Limpar tudo")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "IMPRIMIR / EXPORTAR"), /*#__PURE__*/React.createElement("button", {
+    onClick: handlePrint,
+    style: {
+      ...btn(false, "#22c55e"),
+      fontWeight: 700
+    }
+  }, "\uD83D\uDDA8\uFE0F Imprimir esquema"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      const html = generatePrintHTML(projectName, board, components, holeColors, customLibrary);
+      const b = new Blob([html], {
+        type: "text/html"
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = `${projectName.replace(/\s/g, "_")}_esquema.html`;
+      a.click();
+    },
+    style: btn(false, "#3b82f6")
+  }, "\u2193 Esquema HTML"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!svgRef.current) return;
+      const b = new Blob([svgRef.current.outerHTML], {
+        type: "image/svg+xml"
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(b);
+      a.download = `${projectName}_pcb.svg`;
+      a.click();
+    },
+    style: btn(false, "#9b59b6")
+  }, "\u2193 SVG")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "VISTA"), /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      fontSize: 9,
+      color: "#94a3b8",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: dualView,
+    onChange: e => setDualView(e.target.checked),
+    style: {
+      accentColor: "#22c55e"
+    }
+  }), "Frente + Verso"), /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      fontSize: 9,
+      color: "#94a3b8",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: showNets,
+    onChange: e => setShowNets(e.target.checked),
+    style: {
+      accentColor: "#4ecdc4"
+    }
+  }), "Mostrar Nets"), /*#__PURE__*/React.createElement("label", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      fontSize: 9,
+      color: "#94a3b8",
+      cursor: "pointer"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: showConflicts,
+    onChange: e => setShowConflicts(e.target.checked),
+    style: {
+      accentColor: "#ff0"
+    }
+  }), "Alertas conflito")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "IMAGEM DE FUNDO"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => bgInputRef.current?.click(),
+    style: btn(false, "#e67e22")
+  }, "\uD83D\uDCF7 Carregar imagem"), /*#__PURE__*/React.createElement("input", {
+    ref: bgInputRef,
+    type: "file",
+    accept: "image/*",
+    onChange: handleBgImage,
+    style: {
+      display: "none"
+    }
+  }), bgImage && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      fontSize: 9
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#64748b"
+    }
+  }, "Opacidade:"), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: 0,
+    max: 100,
+    value: bgOpacity * 100,
+    onChange: e => setBgOpacity(e.target.value / 100),
+    style: {
+      flex: 1,
+      accentColor: "#e67e22"
+    }
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setBgImage(null),
+    style: {
+      ...btn(false, "#ef4444"),
+      fontSize: 8
+    }
+  }, "\u2715 Remover imagem"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "auto",
+      padding: "4px 0",
+      borderTop: "1px solid #1e293b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#475569"
+    }
+  }, board.cols, "\xD7", board.rows, " \xB7 ", components.length, " comp. \xB7 ", board.type === "breadboard" ? "Breadboard" : "Perfboard"))), /*#__PURE__*/React.createElement("div", {
+    className: "pb-canvas",
+    ref: canvasRef,
+    style: {
+      flex: "1 1 0%",
+      overflow: "auto",
+      background: "#0a0e17",
+      position: "relative",
+      padding: "40px 10px 30px",
+      minHeight: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "inline-flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      minWidth: "100%",
+      minHeight: "100%",
+      gap: dualView ? 8 : 0,
+      flexWrap: "wrap"
+    }
+  }, editingLabel !== null && (() => {
+    const c = components[editingLabel];
+    const pos = c.pos || c.from || c.origin;
+    if (!pos) return null;
+    const {
+      x,
+      y
+    } = hp(pos.r, pos.c);
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    return /*#__PURE__*/React.createElement("input", {
+      ref: editInputRef,
+      value: editText,
+      onChange: e => setEditText(e.target.value),
+      onBlur: commitLabel,
+      onKeyDown: e => {
+        if (e.key === "Enter") commitLabel();
+        if (e.key === "Escape") setEditingLabel(null);
+      },
+      style: {
+        position: "fixed",
+        left: rect.left + x * zoom - 40,
+        top: rect.top + y * zoom - 24,
+        width: 80,
+        background: "#1e293b",
+        color: "#f59e0b",
+        border: "2px solid #22c55e",
+        borderRadius: 4,
+        padding: "2px 6px",
+        fontSize: 12,
+        fontFamily: "inherit",
+        fontWeight: 700,
+        textAlign: "center",
+        zIndex: 30
+      }
+    });
+  })(), /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center"
+    }
+  }, !dualView && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#475569",
+      marginBottom: 3
+    }
+  }, "VISTA FRONTAL"), dualView && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#475569",
+      marginBottom: 3
+    }
+  }, "FRENTE (componentes)"), renderBoard(false, svgRef)), dualView && /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: "center"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#c9a84c",
+      marginBottom: 3
+    }
+  }, "VERSO (cobre) \u2014 espelhado"), renderBoard(true, svgBackRef))), saveStatus && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      top: 55,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 20,
+      padding: "5px 16px",
+      borderRadius: 5,
+      fontSize: 10,
+      fontWeight: 600,
+      fontFamily: "inherit",
+      background: saveStatus === "saved" ? "#22c55e22" : "#f59e0b22",
+      color: saveStatus === "saved" ? "#22c55e" : "#f59e0b",
+      border: `1px solid ${saveStatus === "saved" ? "#22c55e" : "#f59e0b"}`
+    }
+  }, saveStatus === "saving" ? "A guardar..." : "✓ Guardado!"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      top: 55,
+      right: 14,
+      display: "flex",
+      gap: 3,
+      zIndex: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: fitToScreen,
+    style: {
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#1abc9c",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 8,
+      padding: "0 6px",
+      fontFamily: "inherit"
+    }
+  }, "Ajustar"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setZoom(z => Math.min(z + 0.2, 3)),
+    style: {
+      width: 24,
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#e2e8f0",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "+"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 36,
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#94a3b8",
+      border: "1px solid #334155",
+      fontSize: 9,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, Math.round(zoom * 100), "%"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setZoom(z => Math.max(z - 0.2, 0.3)),
+    style: {
+      width: 24,
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#e2e8f0",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "\u2212")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "sticky",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: "#0f172aee",
+      borderTop: "1px solid #1e293b",
+      padding: "3px 12px",
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 9,
+      color: "#64748b",
+      zIndex: 5
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDD27 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#22c55e"
+    }
+  }, TOOLS.find(t => t.id === tool)?.label || "Selecionar"), selectedLibComp && tool === "library" ? ` → ${allLib.find(l => l.id === selectedLibComp)?.name}` : ""), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#e2e8f0"
+    }
+  }, statusText, dragging ? " (a arrastar)" : ""), /*#__PURE__*/React.createElement("span", null, board.label, " \xB7 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#f59e0b"
+    }
+  }, projectName))))), showSaveModal && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowSaveModal(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#e2e8f0"
+    }
+  }, "\uD83D\uDCBE Guardar como")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: projectName,
+    onChange: e => setProjectName(e.target.value),
+    style: {
+      ...inputS,
+      fontSize: 13,
+      padding: "8px",
+      fontWeight: 600,
+      color: "#f59e0b"
+    },
+    autoFocus: true,
+    onKeyDown: e => {
+      if (e.key === "Enter") saveToStorage();
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      borderTop: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowSaveModal(false),
+    style: {
+      ...btn(false),
+      width: "auto",
+      padding: "5px 14px"
+    }
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => saveToStorage(),
+    style: {
+      ...btn(true),
+      width: "auto",
+      padding: "5px 14px",
+      fontWeight: 700
+    }
+  }, "\uD83D\uDCBE Guardar"))), showLoadModal && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => {
+      setShowLoadModal(false);
+      setConfirmDelete(null);
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "space-between"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#e2e8f0"
+    }
+  }, "\uD83D\uDCC2 Abrir projeto"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowLoadModal(false),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#94a3b8",
+      cursor: "pointer",
+      fontSize: 14
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      maxHeight: "50vh",
+      overflowY: "auto"
+    }
+  }, loadingProjects ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 16,
+      textAlign: "center",
+      color: "#64748b"
+    }
+  }, "A carregar...") : savedProjects.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 16,
+      textAlign: "center",
+      color: "#64748b",
+      fontSize: 10
+    }
+  }, "Nenhum projeto guardado.") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4
+    }
+  }, savedProjects.map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.key,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "6px 8px",
+      borderRadius: 5,
+      border: "1px solid #1e293b",
+      background: "#0c0c14",
+      cursor: "pointer"
+    },
+    onMouseEnter: e => e.currentTarget.style.borderColor = "#22c55e",
+    onMouseLeave: e => e.currentTarget.style.borderColor = "#1e293b"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    },
+    onClick: () => loadFromStorage(p.key)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 600,
+      color: "#e2e8f0"
+    }
+  }, p.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, allBoards[p.boardIdx]?.label || "?", " \xB7 ", p.count, " comp. \xB7 ", p.savedAt ? new Date(p.savedAt).toLocaleString("pt-PT") : "—")), confirmDelete === p.key ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 3
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      await store.del(p.key);
+      const keys = await store.list("perfboard:");
+      const prjs = [];
+      for (const k of keys) {
+        const v = await store.get(k);
+        if (v) try {
+          const d = JSON.parse(v);
+          prjs.push({
+            key: k,
+            name: d.projectName || k,
+            savedAt: d.savedAt,
+            boardIdx: d.boardIdx,
+            count: d.components?.length || 0
+          });
+        } catch {}
+      }
+      setSavedProjects(prjs);
+      setConfirmDelete(null);
+    },
+    style: {
+      ...btn(false, "#ef4444"),
+      width: "auto",
+      fontSize: 8,
+      padding: "2px 6px"
+    }
+  }, "Sim"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConfirmDelete(null),
+    style: {
+      ...btn(false),
+      width: "auto",
+      fontSize: 8,
+      padding: "2px 6px"
+    }
+  }, "N\xE3o")) : /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConfirmDelete(p.key),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#555",
+      cursor: "pointer",
+      fontSize: 12
+    }
+  }, "\uD83D\uDDD1")))))), showLibrary && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowLibrary(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "space-between"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#e2e8f0"
+    }
+  }, "\u25EB Biblioteca de Componentes"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowLibrary(false),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#94a3b8",
+      cursor: "pointer",
+      fontSize: 14
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      maxHeight: "60vh",
+      overflowY: "auto"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 6
+    }
+  }, "Selecione um componente e clique na placa para colocar"), categories.map(cat => /*#__PURE__*/React.createElement("div", {
+    key: cat,
+    style: {
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      fontWeight: 700,
+      color: "#1abc9c",
+      marginBottom: 3,
+      letterSpacing: 1
+    }
+  }, cat.toUpperCase()), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(2,1fr)",
+      gap: 4
+    }
+  }, allLib.filter(l => l.cat === cat).map(l => /*#__PURE__*/React.createElement("button", {
+    key: l.id,
+    onClick: () => {
+      setSelectedLibComp(l.id);
+      setTool("library");
+      setShowLibrary(false);
+    },
+    style: {
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: selectedLibComp === l.id ? "1px solid #22c55e" : "1px solid #1e293b",
+      background: selectedLibComp === l.id ? "#22c55e15" : "#0c0c14",
+      color: "#e2e8f0",
+      cursor: "pointer",
+      textAlign: "left",
+      fontFamily: "inherit",
+      fontSize: 9
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 600,
+      marginBottom: 2
+    }
+  }, l.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#64748b"
+    }
+  }, l.w, "\xD7", l.h, " \xB7 ", l.pins.length, " pinos"), customLibrary.find(c => c.id === l.id) && /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.stopPropagation();
+      deleteCustomComp(l.id);
+    },
+    style: {
+      fontSize: 7,
+      color: "#ef4444",
+      background: "none",
+      border: "none",
+      cursor: "pointer",
+      marginTop: 2
+    }
+  }, "apagar")))))))), showCreator && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowCreator(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#f39c12"
+    }
+  }, "+ Criar Componente Personalizado")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "NOME"), /*#__PURE__*/React.createElement("input", {
+    value: creatorName,
+    onChange: e => setCreatorName(e.target.value),
+    placeholder: "Ex: M\xF3dulo NRF24L01",
+    style: inputS
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "CATEGORIA"), /*#__PURE__*/React.createElement("input", {
+    value: creatorCat,
+    onChange: e => setCreatorCat(e.target.value),
+    style: inputS
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "LARGURA"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 1,
+    max: 30,
+    value: creatorW,
+    onChange: e => setCreatorW(+e.target.value),
+    style: {
+      ...smlInput,
+      width: 48
+    }
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "ALTURA"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 1,
+    max: 10,
+    value: creatorH,
+    onChange: e => setCreatorH(+e.target.value),
+    style: {
+      ...smlInput,
+      width: 48
+    }
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "COR"), /*#__PURE__*/React.createElement("input", {
+    type: "color",
+    value: creatorColor,
+    onChange: e => setCreatorColor(e.target.value),
+    style: {
+      width: 36,
+      height: 26,
+      border: "1px solid #334155",
+      borderRadius: 3,
+      background: "#1e293b",
+      cursor: "pointer"
+    }
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 4
+    }
+  }, "PINOS \u2014 clique para ativar/desativar"), /*#__PURE__*/React.createElement("svg", {
+    width: Math.min(creatorW * 20 + 10, 400),
+    height: creatorH * 20 + 10,
+    style: {
+      background: "#1e293b",
+      borderRadius: 4,
+      border: "1px solid #334155"
+    }
+  }, Array.from({
+    length: creatorH
+  }, (_, r) => Array.from({
+    length: creatorW
+  }, (_, c) => {
+    const k = hk(r, c);
+    const active = creatorPins[k];
+    return /*#__PURE__*/React.createElement("circle", {
+      key: k,
+      cx: 5 + c * 20 + 10,
+      cy: 5 + r * 20 + 10,
+      r: 7,
+      fill: active ? "#22c55e" : "#333",
+      stroke: active ? "#16a34a" : "#555",
+      strokeWidth: 1,
+      style: {
+        cursor: "pointer"
+      },
+      onClick: () => toggleCreatorPin(r, c)
+    });
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#475569",
+      marginTop: 2
+    }
+  }, Object.keys(creatorPins).length, " pinos selecionados")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "PR\xC9-DEFINI\xC7\xD5ES R\xC1PIDAS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      flexWrap: "wrap"
+    }
+  }, [{
+    l: "DIP",
+    fn: () => {
+      const p = {};
+      for (let c = 0; c < creatorW; c++) {
+        p[hk(0, c)] = true;
+        p[hk(creatorH - 1, c)] = true;
+      }
+      setCreatorPins(p);
+    }
+  }, {
+    l: "SIP",
+    fn: () => {
+      const p = {};
+      for (let c = 0; c < creatorW; c++) p[hk(0, c)] = true;
+      setCreatorPins(p);
+    }
+  }, {
+    l: "Todos",
+    fn: () => {
+      const p = {};
+      for (let r = 0; r < creatorH; r++) for (let c = 0; c < creatorW; c++) p[hk(r, c)] = true;
+      setCreatorPins(p);
+    }
+  }, {
+    l: "Limpar",
+    fn: () => setCreatorPins({})
+  }].map(b => /*#__PURE__*/React.createElement("button", {
+    key: b.l,
+    onClick: b.fn,
+    style: {
+      ...btn(false, "#1abc9c"),
+      width: "auto",
+      padding: "2px 8px",
+      fontSize: 8
+    }
+  }, b.l))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      borderTop: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowCreator(false),
+    style: {
+      ...btn(false),
+      width: "auto",
+      padding: "5px 14px"
+    }
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    onClick: saveCustomComponent,
+    style: {
+      ...btn(true),
+      width: "auto",
+      padding: "5px 14px",
+      fontWeight: 700
+    }
+  }, "\uD83D\uDCBE Guardar componente"))), showBoardCreator && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowBoardCreator(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#f39c12"
+    }
+  }, "\u271A Placa Personalizada"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginTop: 2
+    }
+  }, "Defina as medidas em cent\xEDmetros ou em n\xFAmero de furos")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "NOME (opcional)"), /*#__PURE__*/React.createElement("input", {
+    value: newBoardLabel,
+    onChange: e => setNewBoardLabel(e.target.value),
+    placeholder: "Ex: PCB 10\xD75 cm",
+    style: inputS
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      background: "#0c0c14",
+      borderRadius: 6,
+      padding: 8,
+      border: "1px solid #1e293b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#1abc9c",
+      marginBottom: 4,
+      fontWeight: 700
+    }
+  }, "CENT\xCDMETROS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, "Largura"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 0.5,
+    max: 25,
+    step: 0.1,
+    value: (newBoardCols * 0.254).toFixed(1),
+    onChange: e => setNewBoardCols(Math.round(+e.target.value / 0.254)),
+    style: {
+      ...inputS,
+      fontSize: 13,
+      fontWeight: 700,
+      textAlign: "center"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#475569",
+      textAlign: "center"
+    }
+  }, "cm")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, "Altura"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 0.5,
+    max: 15,
+    step: 0.1,
+    value: (newBoardRows * 0.254).toFixed(1),
+    onChange: e => setNewBoardRows(Math.round(+e.target.value / 0.254)),
+    style: {
+      ...inputS,
+      fontSize: 13,
+      fontWeight: 700,
+      textAlign: "center"
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#475569",
+      textAlign: "center"
+    }
+  }, "cm")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      background: "#0c0c14",
+      borderRadius: 6,
+      padding: 8,
+      border: "1px solid #1e293b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#f59e0b",
+      marginBottom: 4,
+      fontWeight: 700
+    }
+  }, "FUROS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, "Colunas"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 2,
+    max: 80,
+    value: newBoardCols,
+    onChange: e => setNewBoardCols(+e.target.value),
+    style: {
+      ...inputS,
+      fontSize: 13,
+      fontWeight: 700,
+      textAlign: "center"
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, "Linhas"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 2,
+    max: 50,
+    value: newBoardRows,
+    onChange: e => setNewBoardRows(+e.target.value),
+    style: {
+      ...inputS,
+      fontSize: 13,
+      fontWeight: 700,
+      textAlign: "center"
+    }
+  }))))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 4
+    }
+  }, "TIPO"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, ["perfboard", "breadboard"].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t,
+    onClick: () => setNewBoardType(t),
+    style: {
+      ...btn(newBoardType === t, newBoardType === t ? "#22c55e" : "#94a3b8"),
+      width: "auto",
+      padding: "6px 14px",
+      fontSize: 10
+    }
+  }, t === "perfboard" ? "🔌 Perfboard" : "🍞 Breadboard"))), newBoardType === "breadboard" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#f59e0b",
+      marginTop: 4
+    }
+  }, "Rails de alimenta\xE7\xE3o e canal central gerados automaticamente.")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0c0c14",
+      borderRadius: 6,
+      padding: 8,
+      border: "1px solid #1e293b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 4
+    }
+  }, "RESUMO"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#e2e8f0"
+    }
+  }, /*#__PURE__*/React.createElement("strong", null, newBoardCols, "\xD7", newBoardRows), " furos \xB7 ", /*#__PURE__*/React.createElement("strong", null, (newBoardCols * 0.254).toFixed(1), "\xD7", (newBoardRows * 0.254).toFixed(1)), " cm \xB7 ", newBoardCols * newBoardRows, " furos total")), customBoards.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 4
+    }
+  }, "PLACAS PERSONALIZADAS GUARDADAS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 3
+    }
+  }, customBoards.map(cb => /*#__PURE__*/React.createElement("div", {
+    key: cb.id,
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "4px 8px",
+      background: "#0c0c14",
+      borderRadius: 4,
+      border: "1px solid #1e293b",
+      fontSize: 9
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#e2e8f0"
+    }
+  }, cb.label, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#64748b"
+    }
+  }, "(", cb.cols, "\xD7", cb.rows, ")")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => deleteCustomBoard(cb.id),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#ef4444",
+      cursor: "pointer",
+      fontSize: 10
+    }
+  }, "\uD83D\uDDD1")))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      borderTop: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowBoardCreator(false),
+    style: {
+      ...btn(false),
+      width: "auto",
+      padding: "5px 14px"
+    }
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    onClick: createCustomBoard,
+    style: {
+      ...btn(true),
+      width: "auto",
+      padding: "5px 14px",
+      fontWeight: 700
+    }
+  }, "\u271A Criar placa"))));
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(PerfboardDesigner));
+</script>
+</body>
+</html>
