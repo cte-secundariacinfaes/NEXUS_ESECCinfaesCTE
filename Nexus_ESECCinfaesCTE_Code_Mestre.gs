@@ -179,6 +179,16 @@ function handleLogin(ss, d) {
     // Check password
     var storedHash = String(row[3]).trim();
     var inputHash  = pwd.startsWith("h_") ? pwd : hashPwd(pwd);
+    
+    // If stored password is plain text (not hashed), hash it before comparing
+    // and auto-convert it in the Sheets for future logins
+    if (storedHash && !storedHash.startsWith("h_")) {
+      var hashedStored = hashPwd(storedHash);
+      // Auto-convert: replace plain text with hash in Sheets
+      try { sh.getRange(r + 1, 4).setValue(hashedStored); } catch(e) {}
+      storedHash = hashedStored;
+    }
+    
     if (storedHash !== inputHash) {
       return {ok: false, msg: "Password incorreta."};
     }
