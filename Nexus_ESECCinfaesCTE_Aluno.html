@@ -2148,6 +2148,40 @@ function escHtml(str){
 }
 
 
+
+// ── Fetch students from Mestre ──────────────────────────────────────
+async function fetchAlunosFromMestre(){
+  var mestreUrl = localStorage.getItem('nexus_mestre_url');
+  if(!mestreUrl){
+    toast('⚠️ URL do Mestre não configurado. Faz login pelo index.html primeiro.','warn');
+    return null;
+  }
+  var sess = getNexusSession();
+  var turma = '';
+  var activeTurma = getActiveTurma();
+  if(activeTurma && activeTurma.nome) turma = activeTurma.nome;
+  if(!turma && sess) turma = sess.turma || '';
+
+  try{
+    var r = await fetch(mestreUrl, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({action:'getUsers', turma:turma, token:'nexus_eac_2026_token'})
+    });
+    var res = await r.json();
+    if(res.ok && res.users){
+      var alunos = res.users.filter(function(u){ return u.tipo==='aluno'; });
+      return alunos;
+    } else {
+      toast('⚠️ '+(res.msg||'Erro ao buscar alunos.'),'warn');
+      return null;
+    }
+  }catch(e){
+    toast('❌ Erro de ligação ao Mestre.','warn');
+    return null;
+  }
+}
+
 // ── Central login session (from index.html login gateway) ────────────
 function getNexusSession(){
   try{
@@ -5055,6 +5089,16 @@ function renderAutoAvView(){
   document.getElementById('autoav-prof-section').style.display='none';
   document.getElementById('autoav-form').style.display='none';
   document.getElementById('autoav-success').style.display='none';
+
+  // Pre-fill name from central login session
+  var _sess = getNexusSession();
+  if(_sess && _sess.nome){
+    var _parts = _sess.nome.split(' ');
+    var _pi = document.getElementById('av-primeiro');
+    var _ui = document.getElementById('av-ultimo');
+    if(_pi && !_pi.value) _pi.value = _parts[0] || '';
+    if(_ui && !_ui.value) _ui.value = _parts[_parts.length-1] || '';
+  }
   const backBtn = document.getElementById('autoav-back-btn')||null;
   if(backBtn) backBtn.remove();
 
@@ -5071,6 +5115,15 @@ function renderAutoAvView(){
     document.getElementById('autoav-disc-select').style.display='none';
     if(list.length===1) setActiveAutoAv(list[0]);
     const cfg = loadAutoAvCfg();
+    // Pre-fill name from session
+    var _sessAv = getNexusSession();
+    if(_sessAv && _sessAv.nome){
+      var _parts = _sessAv.nome.split(' ');
+      var _inp1 = document.getElementById('av-primeiro');
+      var _inp2 = document.getElementById('av-ultimo');
+      if(_inp1 && !_inp1.value) _inp1.value = _parts[0] || '';
+      if(_inp2 && !_inp2.value) _inp2.value = _parts[_parts.length-1] || '';
+    }
     showAutoAvSingleView(cfg);
   }
 }
@@ -6543,6 +6596,28 @@ function renderAulasAlunos(){
     </div>`).join('');
 }
 
+async function aulasImportFromMestre(){
+  var alunos = await fetchAlunosFromMestre();
+  if(!alunos || !alunos.length){ toast('Sem alunos encontrados no Mestre para esta turma.','warn'); return; }
+  var cfg = loadAulasCfg();
+  var existingIds = cfg.alunos.map(function(a){ return a.codigo; });
+  var added = 0;
+  alunos.forEach(function(al){
+    var codigo = al.codigoAulas || al.id || '';
+    if(!codigo || existingIds.indexOf(codigo) >= 0) return;
+    cfg.alunos.push({
+      id: 'al_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,5),
+      nome: al.nome || '',
+      codigo: codigo,
+      pwd: al.pwdAulas || codigo
+    });
+    added++;
+  });
+  saveAulasCfg(cfg);
+  renderAulasAlunos();
+  toast(added > 0 ? '📥 '+added+' aluno(s) importado(s) do Mestre!' : 'Todos os alunos já existem.', added>0?'ok':'warn');
+}
+
 function aulasAddAluno(){
   const cfg = loadAulasCfg();
   if(cfg.alunos.length>=20){ toast('⚠️ Máximo 20 alunos.','warn'); return; }
@@ -7536,6 +7611,27 @@ function renderPresAlunos(){
       </div>
     </div>`;
   }).join('');
+}
+
+async function presImportFromMestre(){
+  var alunos = await fetchAlunosFromMestre();
+  if(!alunos || !alunos.length){ toast('Sem alunos encontrados no Mestre para esta turma.','warn'); return; }
+  var cfg = loadPresCfg();
+  var existingCodes = cfg.alunos.map(function(a){ return a.codigo; });
+  var added = 0;
+  alunos.forEach(function(al){
+    var codigo = al.codigoEstagio || al.id || '';
+    if(!codigo || existingCodes.indexOf(codigo) >= 0) return;
+    cfg.alunos.push({
+      id: 'pa_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,5),
+      nome: al.nome || '',
+      codigo: codigo
+    });
+    added++;
+  });
+  savePresCfg(cfg);
+  renderPresAlunos();
+  toast(added > 0 ? '📥 '+added+' aluno(s) importado(s) do Mestre!' : 'Todos os alunos já existem.', added>0?'ok':'warn');
 }
 
 function presAddAluno(){
