@@ -82,9 +82,6 @@ const BREADBOARDS = [{
   groupSize: 5
 }];
 const ALL_BOARDS = [...PERFBOARDS, ...BREADBOARDS];
-
-// Custom boards stored in state (can grow dynamically)
-const INITIAL_CUSTOM_BOARDS = [];
 const COLORS = ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6", "#1abc9c", "#e67e22", "#ecf0f1", "#34495e", "#e91e63"];
 const TOOLS = [{
   id: "wire",
@@ -493,7 +490,15 @@ const hp = (r, c) => ({
   x: BP + c * HS,
   y: BP + r * HS
 });
-const coord = (r, c) => `${String.fromCharCode(65 + r % 26)}${c + 1}`;
+const coord = (r, c) => {
+  let label = "";
+  let row = r;
+  do {
+    label = String.fromCharCode(65 + row % 26) + label;
+    row = Math.floor(row / 26) - 1;
+  } while (row >= 0);
+  return `${label}${c + 1}`;
+};
 
 // ─── Union-Find for net detection ───
 class UnionFind {
@@ -707,15 +712,16 @@ function generatePrintHTML(name, board, components, holeColors, customLib) {
     color: c.color,
     label: c.label || "—"
   }));
+  const allLibPrint = [...PRESET_LIBRARY, ...(customLib || [])];
   const placed = components.filter(c => c.origin).map((c, i) => ({
     i: i + 1,
-    type: c.type === "library" ? PRESET_LIBRARY.find(l => l.id === c.libraryId)?.name || c.libraryId : TOOLS.find(t => t.id === c.type)?.label || c.type,
+    type: c.type === "library" ? allLibPrint.find(l => l.id === c.libraryId)?.name || c.libraryId : TOOLS.find(t => t.id === c.type)?.label || c.type,
     pos: coord(c.origin.r, c.origin.c),
     label: c.label || "—"
   }));
   const bom = {};
   components.forEach(c => {
-    const t = c.type === "library" ? PRESET_LIBRARY.find(l => l.id === c.libraryId)?.name || "Lib" : TOOLS.find(tt => tt.id === c.type)?.label || c.type;
+    const t = c.type === "library" ? allLibPrint.find(l => l.id === c.libraryId)?.name || "Lib" : TOOLS.find(tt => tt.id === c.type)?.label || c.type;
     if (!bom[t]) bom[t] = 0;
     bom[t]++;
   });
@@ -775,7 +781,6 @@ const PerfboardDesigner = function PerfboardDesigner() {
   const [selectedLibComp, setSelectedLibComp] = useState(null);
 
   // View
-  const [showBack, setShowBack] = useState(false);
   const [dualView, setDualView] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [showNets, setShowNets] = useState(false);
@@ -841,7 +846,8 @@ const PerfboardDesigner = function PerfboardDesigner() {
   };
   const createCustomBoard = async () => {
     const c = Math.max(2, Math.min(80, newBoardCols));
-    const r = Math.max(2, Math.min(50, newBoardRows));
+    let r = Math.max(2, Math.min(50, newBoardRows));
+    if (newBoardType === "breadboard") r = Math.max(6, r); // min 6 rows for BB
     const label = newBoardLabel.trim() || `${c}×${r}`;
     const id = `custom_${Date.now()}`;
     const nb = {
@@ -897,15 +903,22 @@ const PerfboardDesigner = function PerfboardDesigner() {
 
   // ─── Net detection (memoized) ───
   const {
-    nets,
+    netColorMap,
     conflicts
   } = useMemo(() => {
-    const n = showNets ? detectNets(components, board) : {
+    const netData = showNets ? detectNets(components, board) : {
       nets: {}
     };
     const c = showConflicts ? detectConflicts(components) : {};
+    // Pre-compute holeKey → color map for O(1) render lookup
+    const map = {};
+    Object.values(netData.nets).forEach(n => {
+      n.holes.forEach(h => {
+        map[h] = n.color;
+      });
+    });
     return {
-      nets: n.nets,
+      netColorMap: map,
       conflicts: c
     };
   }, [components, board, showNets, showConflicts]);
@@ -1010,7 +1023,6 @@ const PerfboardDesigner = function PerfboardDesigner() {
       try {
         const d = JSON.parse(ev.target.result);
         if (d.components) {
-          pushHistory();
           setBoardIdx(d.boardIdx ?? 3);
           setComponents(d.components || []);
           setHoleColors(d.holeColors || {});
@@ -1142,14 +1154,18 @@ const PerfboardDesigner = function PerfboardDesigner() {
         }]);
       }
     } else if (tool === "header") {
-      pushHistory();
-      setComponents(cs => [...cs, {
-        type: "header",
-        origin: h,
-        len: headerLen,
-        dir: headerDir,
-        color: "#f39c12"
-      }]);
+      const endR = h.r + (headerDir === "v" ? headerLen - 1 : 0);
+      const endC = h.c + (headerDir === "h" ? headerLen - 1 : 0);
+      if (endR < board.rows && endC < board.cols) {
+        pushHistory();
+        setComponents(cs => [...cs, {
+          type: "header",
+          origin: h,
+          len: headerLen,
+          dir: headerDir,
+          color: "#f39c12"
+        }]);
+      }
     } else if (tool === "label") {
       pushHistory();
       setComponents(cs => [...cs, {
@@ -1270,6 +1286,13 @@ const PerfboardDesigner = function PerfboardDesigner() {
         newC = h.c - dragging.offsetC;
       if (newR >= 0 && newC >= 0 && newR < board.rows && newC < board.cols) {
         pushHistory();
+        const oldComp = components[dragging.idx];
+        const oldHoles = getCompHoles(oldComp);
+        // Check which old holes are shared with other components
+        const otherHoles = new Set();
+        components.forEach((c, i) => {
+          if (i !== dragging.idx) getCompHoles(c).forEach(hh => otherHoles.add(hh));
+        });
         setComponents(cs => cs.map((c, i) => {
           if (i !== dragging.idx) return c;
           const nc = {
@@ -1299,6 +1322,42 @@ const PerfboardDesigner = function PerfboardDesigner() {
           }
           return nc;
         }));
+
+        // Clean old hole colors, set new ones
+        setHoleColors(hc => {
+          const nh = {
+            ...hc
+          };
+          oldHoles.forEach(oh => {
+            if (!otherHoles.has(oh)) delete nh[oh];
+          });
+          // Build new comp to get new holes
+          const movedComp = {
+            ...oldComp
+          };
+          if (movedComp.origin) movedComp.origin = {
+            r: newR,
+            c: newC
+          };else if (movedComp.from && movedComp.to) {
+            const dr = newR - movedComp.from.r,
+              dc = newC - movedComp.from.c;
+            movedComp.from = {
+              r: movedComp.from.r + dr,
+              c: movedComp.from.c + dc
+            };
+            movedComp.to = {
+              r: movedComp.to.r + dr,
+              c: movedComp.to.c + dc
+            };
+          } else if (movedComp.pos) movedComp.pos = {
+            r: newR,
+            c: newC
+          };
+          getCompHoles(movedComp).forEach(nh2 => {
+            nh[nh2] = oldComp.color || color;
+          });
+          return nh;
+        });
       }
     }
     setDragging(null);
@@ -1380,6 +1439,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
         setShowLoadModal(false);
         setShowLibrary(false);
         setShowCreator(false);
+        setShowBoardCreator(false);
       }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedComp !== null && !showSaveModal && !showLoadModal) {
         deleteCompWithHoles(selectedComp);
@@ -1399,7 +1459,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  });
+  }, [editingLabel, selectedComp, showSaveModal, showLoadModal, undo]);
 
   // ─── Rendering ───
   const renderBoard = (isBack = false, ref = null) => {
@@ -1450,11 +1510,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
 
       // Net highlight
       let netColor = null;
-      if (showNets) {
-        Object.values(nets).forEach(n => {
-          if (n.holes.includes(k)) netColor = n.color;
-        });
-      }
+      if (showNets) netColor = netColorMap[k] || null;
       const conflictHere = showConflicts && conflicts[k];
       holes.push(/*#__PURE__*/React.createElement("g", {
         key: `${r},${c},${isBack ? 1 : 0}`
@@ -1505,7 +1561,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
         if (!isBack) handleDragEnd();
       },
       style: {
-        cursor: tool === "select" ? dragging ? "grabbing" : "default" : tool === "eraser" ? "not-allowed" : "crosshair",
+        cursor: tool === "select" ? dragging ? "grabbing" : "default" : tool === "eraser" ? "pointer" : "crosshair",
         borderRadius: 8,
         boxShadow: "0 0 30px rgba(34,197,94,0.07)",
         touchAction: "none"
@@ -2154,6 +2210,8 @@ const PerfboardDesigner = function PerfboardDesigner() {
   }, "\u2502"), allBoards.map((b, i) => /*#__PURE__*/React.createElement("button", {
     key: i,
     onClick: () => {
+      if (i === boardIdx) return;
+      if (components.length > 0 && !confirm(`Mudar para ${b.label}? O projeto atual será apagado.`)) return;
       setBoardIdx(i);
       setComponents([]);
       setHoleColors({});
@@ -2397,9 +2455,11 @@ const PerfboardDesigner = function PerfboardDesigner() {
     }
   }, "\u2715 Apagar sele\xE7\xE3o"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      pushHistory();
-      setComponents([]);
-      setHoleColors({});
+      if (components.length === 0 || confirm("Apagar todos os componentes da placa?")) {
+        pushHistory();
+        setComponents([]);
+        setHoleColors({});
+      }
     },
     style: {
       ...btn(false, "#ef4444")
@@ -3450,7 +3510,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
       color: "#f59e0b",
       marginTop: 4
     }
-  }, "Rails de alimenta\xE7\xE3o e canal central gerados automaticamente.")), /*#__PURE__*/React.createElement("div", {
+  }, "Rails de alimenta\xE7\xE3o e canal central gerados automaticamente. M\xEDnimo 6 linhas.")), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "#0c0c14",
       borderRadius: 6,
