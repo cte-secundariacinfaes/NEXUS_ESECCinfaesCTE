@@ -146,6 +146,12 @@ const TOOLS = [{
   icon: "◫",
   desc: "Componente da lib.",
   clicks: 1
+}, {
+  id: "eraser",
+  label: "Borracha",
+  icon: "⌫",
+  desc: "Apagar furos/comp.",
+  clicks: 1
 }];
 
 // ─── Preset Library ───
@@ -1084,6 +1090,24 @@ const PerfboardDesigner = function PerfboardDesigner() {
       setSelectedComp(idx >= 0 ? idx : null);
       return;
     }
+    if (tool === "eraser") {
+      // First try to find and delete a component at this hole
+      const idx = findCompAt(h);
+      if (idx >= 0) {
+        deleteCompWithHoles(idx);
+      } else {
+        // Just clear the hole color
+        pushHistory();
+        setHoleColors(hc => {
+          const nh = {
+            ...hc
+          };
+          delete nh[hk(h.r, h.c)];
+          return nh;
+        });
+      }
+      return;
+    }
     const twoClick = ["wire", "jumper", "resistor", "capacitor", "led", "diode"];
     if (twoClick.includes(tool)) {
       if (!wireStart) {
@@ -1146,7 +1170,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
         }]);
       }
     }
-    if (tool !== "label" && tool !== "select") setHoleColors(hc => ({
+    if (tool !== "label" && tool !== "select" && tool !== "eraser") setHoleColors(hc => ({
       ...hc,
       [hk(h.r, h.c)]: color
     }));
@@ -1164,6 +1188,56 @@ const PerfboardDesigner = function PerfboardDesigner() {
       if (c.pos) return c.pos.r === h.r && c.pos.c === h.c;
       return false;
     });
+  };
+
+  // ─── Get holes occupied by a component ───
+  const getCompHoles = comp => {
+    const holes = [];
+    if (comp.from) holes.push(hk(comp.from.r, comp.from.c));
+    if (comp.to) holes.push(hk(comp.to.r, comp.to.c));
+    if (comp.pos) holes.push(hk(comp.pos.r, comp.pos.c));
+    if (comp.origin) {
+      if (comp.type === "ic") {
+        for (let i = 0; i < (comp.w || 1); i++) {
+          holes.push(hk(comp.origin.r, comp.origin.c + i));
+          holes.push(hk(comp.origin.r + (comp.h || 1) - 1, comp.origin.c + i));
+        }
+      } else if (comp.type === "header") {
+        for (let i = 0; i < (comp.len || 1); i++) {
+          const pr = comp.origin.r + (comp.dir === "v" ? i : 0);
+          const pc = comp.origin.c + (comp.dir === "h" ? i : 0);
+          holes.push(hk(pr, pc));
+        }
+      } else if (comp.type === "library") {
+        const def = [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === comp.libraryId);
+        if (def) def.pins.forEach(p => holes.push(hk(comp.origin.r + p.r, comp.origin.c + p.c)));
+      }
+    }
+    return holes;
+  };
+
+  // ─── Delete component + clean its holes ───
+  const deleteCompWithHoles = idx => {
+    if (idx === null || idx === undefined || idx < 0 || idx >= components.length) return;
+    pushHistory();
+    const comp = components[idx];
+    const holesToClean = getCompHoles(comp);
+    // Only clean holes not used by other components
+    const otherHoles = new Set();
+    components.forEach((c, i) => {
+      if (i !== idx) getCompHoles(c).forEach(h => otherHoles.add(h));
+    });
+    setHoleColors(hc => {
+      const nh = {
+        ...hc
+      };
+      holesToClean.forEach(h => {
+        if (!otherHoles.has(h)) delete nh[h];
+      });
+      return nh;
+    });
+    setComponents(cs => cs.filter((_, i) => i !== idx));
+    setSelectedComp(null);
   };
 
   // ─── Drag ───
@@ -1307,9 +1381,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
         setShowCreator(false);
       }
       if ((e.key === "Delete" || e.key === "Backspace") && selectedComp !== null && !showSaveModal && !showLoadModal) {
-        pushHistory();
-        setComponents(cs => cs.filter((_, i) => i !== selectedComp));
-        setSelectedComp(null);
+        deleteCompWithHoles(selectedComp);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "z") {
         e.preventDefault();
@@ -1432,7 +1504,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
         if (!isBack) handleDragEnd();
       },
       style: {
-        cursor: tool === "select" ? dragging ? "grabbing" : "default" : "crosshair",
+        cursor: tool === "select" ? dragging ? "grabbing" : "default" : tool === "eraser" ? "not-allowed" : "crosshair",
         borderRadius: 8,
         boxShadow: "0 0 30px rgba(34,197,94,0.07)",
         touchAction: "none"
@@ -1466,9 +1538,9 @@ const PerfboardDesigner = function PerfboardDesigner() {
       cy: hp(hoverHole.r, hoverHole.c).y,
       r: PR + 2,
       fill: "none",
-      stroke: "#fff",
-      strokeWidth: 1.2,
-      opacity: 0.5
+      stroke: tool === "eraser" ? "#ef4444" : "#fff",
+      strokeWidth: tool === "eraser" ? 2 : 1.2,
+      opacity: tool === "eraser" ? 0.8 : 0.5
     }), isBack && renderComponentsBack());
   };
   const renderComponents = () => components.map((comp, idx) => {
@@ -2317,11 +2389,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
     }
   }, "\u21BA Desfazer (Ctrl+Z)"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      if (selectedComp !== null) {
-        pushHistory();
-        setComponents(cs => cs.filter((_, i) => i !== selectedComp));
-        setSelectedComp(null);
-      }
+      if (selectedComp !== null) deleteCompWithHoles(selectedComp);
     },
     style: {
       ...btn(false, selectedComp !== null ? "#ef4444" : "#555")
