@@ -76,6 +76,17 @@ Aluno.html      ──🔄 Carregar───→  Google Sheets (lê config + esc
 - 100% offline — não precisa de Google Sheets
 
 
+### 📡 Terminal ESP32 RFID
+- Presenças por cartão de aluno — sem telemóvel, sem códigos
+- Hardware: ESP32 + RC522 + OLED SSH1106 + Buzzer + LEDs (~12€/estação)
+- Variante portátil com powerbank para estágio (~18€)
+- Comunicação WiFi → HTTPS → Sheets Mestre → Sheets Turma
+- Auto-toggle entrada/saída, cooldown anti-duplos, reconexão WiFi
+- Feedback visual (OLED + LEDs) e sonoro (buzzer)
+- Suporte para múltiplas estações em simultâneo
+- Registos no mesmo formato que o telemóvel — relatórios unificados
+- Guia completo: [ESP32_RFID.html](Nexus_ESECCinfaesCTE_ESP32_RFID.html)
+
 ### 🔑 Login Centralizado
 
 - Autenticação via Google Sheets Mestre (nº aluno + password)
@@ -97,7 +108,8 @@ Aluno.html      ──🔄 Carregar───→  Google Sheets (lê config + esc
 | `Nexus_ESECCinfaesCTE_Perfboard.html` | Perfboard Designer — projetar PCBs e breadboards | 90K |
 | `Nexus_ESECCinfaesCTE_Manual.html` | Manual de utilização com sidebar navegável | 40K |
 | `Nexus_ESECCinfaesCTE_Code.gs` | Google Apps Script — backend turma (23 ações) | 40K |
-| `Nexus_ESECCinfaesCTE_Code_Mestre.gs` | Google Apps Script — backend mestre (8 ações: login, gestão, RFID) | 11K |
+| `Nexus_ESECCinfaesCTE_Code_Mestre.gs` | Google Apps Script — backend mestre (8 ações: login, gestão, RFID) | 13K |
+| `Nexus_ESECCinfaesCTE_ESP32_RFID.html` | Guia completo do terminal ESP32 RFID (montagem, firmware, configuração) | 43K |
 
 ---
 
@@ -143,6 +155,19 @@ Aluno.html      ──🔄 Carregar───→  Google Sheets (lê config + esc
 
 5. No `index.html`, edita `HARDCODED_MESTRE_URL = '...'` com o URL do Apps Script
 6. Commit — pronto, todos os alunos acedem via nº + password
+
+
+### 6. Terminal ESP32 RFID (opcional)
+
+Consulta o guia completo: **[Nexus_ESECCinfaesCTE_ESP32_RFID.html](Nexus_ESECCinfaesCTE_ESP32_RFID.html)**
+
+Resumo:
+1. Monta o hardware (~12€): ESP32 + RC522 + OLED + Buzzer + LEDs
+2. Instala o Arduino IDE + bibliotecas (MFRC522, U8g2, ArduinoJson)
+3. Configura WiFi, URL do Mestre e token no firmware
+4. Upload para o ESP32
+5. Regista os UIDs dos cartões na coluna "UID RFID" do Sheets Mestre
+6. Testa: passa cartão → "ENTRADA — Nome — OK!"
 
 ### 4. Distribuir aos alunos
 
