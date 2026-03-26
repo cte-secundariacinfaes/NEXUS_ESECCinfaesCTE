@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Terminal RFID ESP32</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0F2447;--blue:#1B3A6B;--accent:#0284C7;--teal:#0891B2;
+  --green:#059669;--red:#DC2626;--gold:#D97706;--purple:#7C3AED;
+  --bg:#F0F4F8;--card:#fff;--text:#1E293B;--muted:#64748B;--border:#E2E8F0;
+  --code-bg:#1E1E2E;--code-fg:#CDD6F4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  display:flex;min-height:100vh;line-height:1.7}
+
+/* ── Sidebar ── */
+.sidebar{width:260px;background:linear-gradient(180deg,var(--navy),#0A1628);color:#CBD5E1;
+  padding:20px 0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100;
+  border-right:1px solid rgba(255,255,255,.08)}
+.sb-title{padding:0 20px 16px;font-size:1.1rem;font-weight:800;color:#fff;
+  border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:12px;line-height:1.3}
+.sb-title small{display:block;font-size:.68rem;font-weight:400;color:#64748B;margin-top:2px}
+.sb-section{padding:4px 12px;font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;
+  color:#475569;font-weight:700;margin-top:14px}
+.sb-link{display:flex;align-items:center;gap:8px;padding:7px 20px;font-size:.78rem;
+  color:#94A3B8;text-decoration:none;transition:.15s;border-left:3px solid transparent}
+.sb-link:hover{background:rgba(255,255,255,.06);color:#fff;border-left-color:var(--accent)}
+.sb-link-icon{font-size:.85rem;width:20px;text-align:center;flex-shrink:0}
+
+/* ── Main ── */
+.main{margin-left:260px;padding:32px 40px 60px;max-width:900px;flex:1}
+
+h1{font-size:1.8rem;font-weight:800;color:var(--navy);margin-bottom:8px;border-bottom:3px solid var(--accent);padding-bottom:10px}
+h2{font-size:1.3rem;font-weight:800;color:var(--navy);margin:40px 0 12px;padding-top:16px;
+  border-top:2px solid var(--border)}
+h3{font-size:1rem;font-weight:700;color:var(--blue);margin:24px 0 8px}
+h4{font-size:.9rem;font-weight:700;color:var(--text);margin:16px 0 6px}
+p{margin:8px 0;font-size:.88rem}
+ul,ol{margin:8px 0 8px 24px;font-size:.86rem}
+li{margin:4px 0}
+strong{color:var(--navy)}
+code{font-family:'JetBrains Mono',monospace;font-size:.82rem;background:#F1F5F9;
+  padding:1px 6px;border-radius:4px;color:var(--accent)}
+kbd{font-family:'JetBrains Mono',monospace;font-size:.78rem;background:#E2E8F0;
+  padding:2px 8px;border-radius:4px;border:1px solid #CBD5E1;color:var(--text)}
+
+/* ── Tables ── */
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.84rem}
+th{background:var(--navy);color:#fff;padding:10px 14px;text-align:left;font-weight:600;font-size:.78rem}
+td{padding:8px 14px;border-bottom:1px solid var(--border)}
+tr:nth-child(even){background:#F8FAFC}
+tr:hover{background:#EFF6FF}
+
+/* ── Code blocks ── */
+.code-block{background:var(--code-bg);color:var(--code-fg);border-radius:12px;
+  padding:18px 20px;margin:12px 0;overflow-x:auto;font-family:'JetBrains Mono',monospace;
+  font-size:.78rem;line-height:1.6;border:1px solid #313244;position:relative}
+.code-block .code-lang{position:absolute;top:8px;right:12px;font-size:.62rem;
+  color:#6C7086;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.code-block .comment{color:#6C7086}
+.code-block .keyword{color:#CBA6F7}
+.code-block .string{color:#A6E3A1}
+.code-block .number{color:#FAB387}
+.code-block .define{color:#89B4FA}
+
+/* ── Notes ── */
+.note{display:flex;gap:10px;padding:12px 16px;border-radius:10px;margin:12px 0;font-size:.84rem;line-height:1.6}
+.note.info{background:#EFF6FF;border:1px solid #93C5FD;color:#1E40AF}
+.note.warn{background:#FEF3C7;border:1px solid #FDE68A;color:#92400E}
+.note.danger{background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B}
+.note.success{background:#F0FDF4;border:1px solid #86EFAC;color:#065F46}
+.note-icon{font-size:1.2rem;flex-shrink:0;margin-top:1px}
+
+/* ── Cards ── */
+.hw-card{background:var(--card);border-radius:14px;padding:18px 20px;margin:12px 0;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);border:1.5px solid var(--border)}
+.hw-card .hw-title{font-weight:800;color:var(--navy);margin-bottom:6px;font-size:.92rem}
+.hw-card .hw-meta{font-size:.75rem;color:var(--muted)}
+
+/* ── Wiring table ── */
+.wire-table td:first-child{font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.wire-table td:nth-child(2){font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace}
+.wire-table td:nth-child(3){color:var(--muted);font-size:.8rem}
+
+/* ── Step list ── */
+.step-list{counter-reset:step;list-style:none;margin-left:0;padding-left:0}
+.step-list li{counter-increment:step;padding:8px 0 8px 40px;position:relative;
+  border-left:2px solid var(--border);margin-left:14px}
+.step-list li::before{content:counter(step);position:absolute;left:-14px;top:6px;
+  width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:4px;background:#F1F5F9;border-radius:10px;padding:3px;margin:16px 0}
+.tab{flex:1;padding:10px;border:none;border-radius:8px;font-family:inherit;
+  font-size:.82rem;font-weight:700;cursor:pointer;background:none;color:var(--muted);transition:.2s}
+.tab.active{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(15,36,71,.2)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── BOM ── */
+.bom-total{font-size:1.1rem;font-weight:800;color:var(--green);text-align:right;padding:10px 14px}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:20px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+  <div class="sb-title">
+    🔌 Terminal RFID ESP32
+    <small>Nexus ESECCinfãesCTE</small>
+  </div>
+
+  <div class="sb-section">Visão Geral</div>
+  <a class="sb-link" href="#intro"><span class="sb-link-icon">📋</span> Introdução</a>
+  <a class="sb-link" href="#architecture"><span class="sb-link-icon">🏗️</span> Arquitetura</a>
+  <a class="sb-link" href="#modes"><span class="sb-link-icon">🔀</span> Modos de Operação</a>
+
+  <div class="sb-section">Hardware</div>
+  <a class="sb-link" href="#bom"><span class="sb-link-icon">🛒</span> Lista de Material</a>
+  <a class="sb-link" href="#wiring"><span class="sb-link-icon">🔌</span> Ligações</a>
+  <a class="sb-link" href="#assembly"><span class="sb-link-icon">🔧</span> Montagem</a>
+  <a class="sb-link" href="#power"><span class="sb-link-icon">🔋</span> Alimentação</a>
+
+  <div class="sb-section">Firmware</div>
+  <a class="sb-link" href="#arduino-setup"><span class="sb-link-icon">⚙️</span> Arduino IDE</a>
+  <a class="sb-link" href="#firmware"><span class="sb-link-icon">💾</span> Código Completo</a>
+  <a class="sb-link" href="#config"><span class="sb-link-icon">🔧</span> Configuração WiFi</a>
+
+  <div class="sb-section">Integração</div>
+  <a class="sb-link" href="#register-cards"><span class="sb-link-icon">💳</span> Registar Cartões</a>
+  <a class="sb-link" href="#station-setup"><span class="sb-link-icon">🏫</span> Setup por Estação</a>
+  <a class="sb-link" href="#testing"><span class="sb-link-icon">🧪</span> Testes</a>
+
+  <div class="sb-section">Referência</div>
+  <a class="sb-link" href="#api"><span class="sb-link-icon">📡</span> API Mestre</a>
+  <a class="sb-link" href="#troubleshooting"><span class="sb-link-icon">🔧</span> Problemas</a>
+  <a class="sb-link" href="#enclosure"><span class="sb-link-icon">📦</span> Caixa / Montagem Final</a>
+
+  <div style="padding:20px;margin-top:20px;border-top:1px solid rgba(255,255,255,.08)">
+    <a href="Nexus_ESECCinfaesCTE_Manual.html" style="color:#64748B;font-size:.72rem;text-decoration:none">
+      ← Voltar ao Manual
+    </a>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h1 id="intro">🔌 Terminal RFID ESP32 — Nexus ESECCinfãesCTE</h1>
+
+<p>Terminal de presenças por cartão RFID para o sistema Nexus. O aluno passa o cartão ao entrar na sala ou no estágio — o ESP32 lê o UID, comunica com o Google Sheets Mestre via WiFi, e regista a presença automaticamente.</p>
+
+<div class="note info">
+  <span class="note-icon">💡</span>
+  <div>O terminal é <strong>complementar</strong> ao sistema de telemóvel — ambos podem coexistir. Se o terminal falhar, os alunos usam o telemóvel como fallback.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="architecture">🏗️ Arquitetura</h2>
+
+<div class="code-block">
+<span class="code-lang">Diagrama</span>
+┌─────────────────┐     WiFi HTTP POST      ┌──────────────────────┐
+│  ESP32 Terminal  │ ──────────────────────→ │  Code_Mestre.gs       │
+│  + RC522 RFID    │ ←────────────────────── │  (Google Apps Script) │
+│  + OLED SSH1106  │     JSON response       └──────────┬───────────┘
+│  + Buzzer + LEDs │                                    │
+└─────────────────┘                           ┌────────▼───────────┐
+                                              │  Code.gs (Turma)    │
+                                              │  → Presenças Sheets │
+                                              └────────────────────┘
+
+Fluxo:
+1. Aluno passa cartão → ESP32 lê UID (ex: A3B2C1D4)
+2. ESP32 → POST {action:"rfidPresenca", uid:"A3B2C1D4", token:"..."}
+3. Mestre resolve UID → nome, turma, sheetsUrl
+4. Mestre → POST para Code.gs da turma → regista presença
+5. Mestre → responde ao ESP32: {ok:true, nome:"David Cardoso"}
+6. ESP32 mostra no OLED: "✓ David Cardoso" + bip verde
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="modes">🔀 Modos de Operação</h2>
+
+<table>
+<tr><th>Modo</th><th>Descrição</th><th>Quando usar</th></tr>
+<tr><td><strong>Entrada</strong></td><td>Regista entrada do aluno</td><td>Início da aula / estágio</td></tr>
+<tr><td><strong>Saída</strong></td><td>Regista saída do aluno</td><td>Fim da aula / estágio</td></tr>
+<tr><td><strong>Registo</strong></td><td>Mostra UID do cartão (para associar a aluno)</td><td>Configuração inicial</td></tr>
+</table>
+
+<p>O modo é alterado com o <strong>botão físico</strong> no terminal (GPIO 0 / BOOT). Cada pressão alterna: Entrada → Saída → Registo → Entrada → ...</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="bom">🛒 Lista de Material (BOM)</h2>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('bom-basic')">Básico (~12€)</button>
+  <button class="tab" onclick="showTab('bom-full')">Completo (~18€)</button>
+</div>
+
+<div class="tab-content active" id="bom-basic">
+<table>
+<tr><th>Componente</th><th>Modelo</th><th>Quantidade</th><th>Preço ~</th></tr>
+<tr><td>Microcontrolador</td><td>ESP32 DevKit V1 (30 pinos)</td><td>1</td><td>4,50€</td></tr>
+<tr><td>Leitor RFID</td><td>RC522 (13.56 MHz, MIFARE)</td><td>1</td><td>1,50€</td></tr>
+<tr><td>Ecrã OLED</td><td>SSH1106 1.3" 128×64 I2C</td><td>1</td><td>2,80€</td></tr>
+<tr><td>Buzzer</td><td>Buzzer ativo 5V (2 pinos)</td><td>1</td><td>0,30€</td></tr>
+<tr><td>LEDs</td><td>LED verde 5mm + LED vermelho 5mm</td><td>2</td><td>0,10€</td></tr>
+<tr><td>Resistências</td><td>220Ω (para LEDs)</td><td>2</td><td>0,05€</td></tr>
+<tr><td>Breadboard</td><td>Half-size 400 pontos</td><td>1</td><td>1,20€</td></tr>
+<tr><td>Jumpers</td><td>M-M e M-F (pack)</td><td>~15</td><td>1,00€</td></tr>
+<tr><td>Cabo USB</td><td>Micro-USB (alimentação + programação)</td><td>1</td><td>0,50€</td></tr>
+<tr class="bom-total"><td colspan="3"><strong>Total estimado</strong></td><td><strong>~12€</strong></td></tr>
+</table>
+</div>
+
+<div class="tab-content" id="bom-full">
+<table>
+<tr><th>Componente</th><th>Modelo</th><th>Quantidade</th><th>Preço ~</th></tr>
+<tr><td>Microcontrolador</td><td>ESP32 DevKit V1 (30 pinos)</td><td>1</td><td>4,50€</td></tr>
+<tr><td>Leitor RFID</td><td>RC522 (13.56 MHz, MIFARE)</td><td>1</td><td>1,50€</td></tr>
+<tr><td>Ecrã OLED</td><td>SSH1106 1.3" 128×64 I2C</td><td>1</td><td>2,80€</td></tr>
+<tr><td>Buzzer</td><td>Buzzer ativo 5V (2 pinos)</td><td>1</td><td>0,30€</td></tr>
+<tr><td>LEDs</td><td>LED verde 5mm + LED vermelho 5mm</td><td>2</td><td>0,10€</td></tr>
+<tr><td>Resistências</td><td>220Ω (para LEDs)</td><td>2</td><td>0,05€</td></tr>
+<tr><td>Botão</td><td>Botão de pressão 6mm (modo)</td><td>1</td><td>0,10€</td></tr>
+<tr><td>Placa perfurada</td><td>PCB perfurada 5×7 cm (ELEGOO)</td><td>1</td><td>0,40€</td></tr>
+<tr><td>Caixa</td><td>Caixa plástica 100×60×25mm</td><td>1</td><td>2,00€</td></tr>
+<tr><td>Bateria (opcional)</td><td>18650 Li-Ion + TP4056 carregador</td><td>1</td><td>3,50€</td></tr>
+<tr><td>Jumpers/Fio</td><td>Fio de cobre esmaltado + headers</td><td>—</td><td>1,00€</td></tr>
+<tr><td>Cabo USB</td><td>Micro-USB</td><td>1</td><td>0,50€</td></tr>
+<tr class="bom-total"><td colspan="3"><strong>Total estimado</strong></td><td><strong>~17€</strong></td></tr>
+</table>
+</div>
+
+<div class="note info">
+  <span class="note-icon">🛒</span>
+  <div>Preços de AliExpress/eBay (envio lento). Em loja local (Mauser, Mouser) pode custar 2–3× mais. O OLED <strong>deve ser o SSH1106 1.3" I2C</strong> (4 pinos: VDD, GND, SCK, SDA) — não o SSD1306 0.96".</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="wiring">🔌 Ligações (Pinout)</h2>
+
+<h3>RC522 RFID → ESP32</h3>
+<table class="wire-table">
+<tr><th>RC522</th><th>ESP32</th><th>Nota</th></tr>
+<tr><td>SDA (SS)</td><td>GPIO 5</td><td>Chip Select</td></tr>
+<tr><td>SCK</td><td>GPIO 18</td><td>SPI Clock</td></tr>
+<tr><td>MOSI</td><td>GPIO 23</td><td>SPI Master Out</td></tr>
+<tr><td>MISO</td><td>GPIO 19</td><td>SPI Master In</td></tr>
+<tr><td>IRQ</td><td>—</td><td>Não ligado</td></tr>
+<tr><td>GND</td><td>GND</td><td>—</td></tr>
+<tr><td>RST</td><td>GPIO 27</td><td>Reset</td></tr>
+<tr><td>3.3V</td><td>3V3</td><td>⚠️ Nunca ligar a 5V!</td></tr>
+</table>
+
+<h3>OLED SSH1106 → ESP32 (I2C)</h3>
+<table class="wire-table">
+<tr><th>OLED</th><th>ESP32</th><th>Nota</th></tr>
+<tr><td>VDD</td><td>3V3</td><td>Alimentação</td></tr>
+<tr><td>GND</td><td>GND</td><td>—</td></tr>
+<tr><td>SCK (SCL)</td><td>GPIO 22</td><td>I2C Clock</td></tr>
+<tr><td>SDA</td><td>GPIO 21</td><td>I2C Data</td></tr>
+</table>
+
+<h3>Buzzer + LEDs + Botão → ESP32</h3>
+<table class="wire-table">
+<tr><th>Componente</th><th>ESP32</th><th>Nota</th></tr>
+<tr><td>Buzzer (+)</td><td>GPIO 25</td><td>Pino positivo (o mais comprido)</td></tr>
+<tr><td>Buzzer (−)</td><td>GND</td><td>—</td></tr>
+<tr><td>LED Verde (ânodo)</td><td>GPIO 26</td><td>Através de resistência 220Ω</td></tr>
+<tr><td>LED Verde (cátodo)</td><td>GND</td><td>—</td></tr>
+<tr><td>LED Vermelho (ânodo)</td><td>GPIO 33</td><td>Através de resistência 220Ω</td></tr>
+<tr><td>LED Vermelho (cátodo)</td><td>GND</td><td>—</td></tr>
+<tr><td>Botão (um lado)</td><td>GPIO 0</td><td>BOOT button (já existe no DevKit)</td></tr>
+<tr><td>Botão (outro lado)</td><td>GND</td><td>Pull-up interno ativado no código</td></tr>
+</table>
+
+<div class="note warn">
+  <span class="note-icon">⚠️</span>
+  <div><strong>RC522 funciona a 3.3V!</strong> Nunca ligar o VCC do RC522 a 5V — danifica o módulo. O ESP32 DevKit fornece 3.3V no pino <code>3V3</code>.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="assembly">🔧 Montagem Passo a Passo</h2>
+
+<ol class="step-list">
+  <li>Coloca o <strong>ESP32 DevKit</strong> na breadboard, centrado, com os pinos a ocupar ambos os lados</li>
+  <li>Liga o <strong>RC522</strong> com 7 jumpers M-F conforme a tabela acima. O fio mais crítico é o <code>3V3</code> — confirma que não está nos 5V</li>
+  <li>Liga o <strong>OLED SSH1106</strong> com 4 jumpers: VDD→3V3, GND→GND, SCK→GPIO22, SDA→GPIO21</li>
+  <li>Liga o <strong>buzzer</strong>: pino longo (+) ao GPIO 25, pino curto (−) ao GND</li>
+  <li>Liga o <strong>LED verde</strong>: ânodo → resistência 220Ω → GPIO 26, cátodo → GND</li>
+  <li>Liga o <strong>LED vermelho</strong>: ânodo → resistência 220Ω → GPIO 33, cátodo → GND</li>
+  <li>O <strong>botão de modo</strong> usa o botão BOOT do ESP32 (GPIO 0) — já está na placa, não precisa de fio extra</li>
+  <li>Liga o <strong>cabo USB</strong> ao computador para programar</li>
+</ol>
+
+<div class="note success">
+  <span class="note-icon">✅</span>
+  <div>Antes de programar, verifica: <strong>1)</strong> RC522 ligado a 3.3V (não 5V), <strong>2)</strong> SDA do OLED no GPIO 21 (não confundir com SDA do RC522 que é GPIO 5), <strong>3)</strong> LEDs com resistência (sem resistência queimam).</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="power">🔋 Alimentação</h2>
+
+<h4>Opção A — USB (recomendada para sala fixa)</h4>
+<p>Cabo Micro-USB ligado a um carregador de telemóvel ou ao computador. Sempre ligado, sempre pronto.</p>
+
+<h4>Opção B — Bateria 18650 (para estágio / portátil)</h4>
+<table>
+<tr><th>Componente</th><th>Ligação</th></tr>
+<tr><td>TP4056 (OUT+)</td><td>ESP32 VIN (5V)</td></tr>
+<tr><td>TP4056 (OUT−)</td><td>ESP32 GND</td></tr>
+<tr><td>18650 (+)</td><td>TP4056 (B+)</td></tr>
+<tr><td>18650 (−)</td><td>TP4056 (B−)</td></tr>
+</table>
+<p>Autonomia estimada: <strong>8–12 horas</strong> (18650 de 2600mAh, ESP32 em modo ativo).</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="arduino-setup">⚙️ Configuração do Arduino IDE</h2>
+
+<ol class="step-list">
+  <li>Instala o <a href="https://www.arduino.cc/en/software" target="_blank" style="color:var(--accent)">Arduino IDE 2.x</a></li>
+  <li>Adiciona o ESP32 ao Arduino IDE:
+    <br><strong>File → Preferences → Additional Board URLs:</strong>
+    <div class="code-block">https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json</div>
+  </li>
+  <li><strong>Tools → Board → Boards Manager</strong> → procura <code>esp32</code> → instala <strong>esp32 by Espressif</strong></li>
+  <li>Seleciona a board: <strong>Tools → Board → ESP32 Dev Module</strong></li>
+  <li>Instala as bibliotecas: <strong>Sketch → Include Library → Manage Libraries</strong>
+    <table>
+    <tr><th>Biblioteca</th><th>Autor</th><th>Para quê</th></tr>
+    <tr><td><code>MFRC522</code></td><td>GithubCommunity</td><td>Leitor RFID RC522</td></tr>
+    <tr><td><code>U8g2</code></td><td>olikraus</td><td>OLED SSH1106 (I2C)</td></tr>
+    <tr><td><code>ArduinoJson</code></td><td>Benoit Blanchon</td><td>Parsing JSON</td></tr>
+    <tr><td><code>WiFiClientSecure</code></td><td>(built-in ESP32)</td><td>HTTPS para Google</td></tr>
+    </table>
+  </li>
+  <li>Seleciona a porta: <strong>Tools → Port → COM3</strong> (ou <code>/dev/ttyUSB0</code> em Linux)</li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="firmware">💾 Firmware Completo</h2>
+
+<p>Copia o código abaixo, ajusta as <strong>3 constantes</strong> no topo (WiFi + URL + Token), e faz upload.</p>
+
+<div class="code-block">
+<span class="code-lang">Arduino (C++)</span>
+// ═══════════════════════════════════════════════════════════════
+// Nexus ESECCinfãesCTE — Terminal RFID ESP32 (v1.0)
+// ═══════════════════════════════════════════════════════════════
+
+#include &lt;WiFi.h&gt;
+#include &lt;HTTPClient.h&gt;
+#include &lt;WiFiClientSecure.h&gt;
+#include &lt;SPI.h&gt;
+#include &lt;MFRC522.h&gt;
+#include &lt;U8g2lib.h&gt;
+#include &lt;ArduinoJson.h&gt;
+#include &lt;Wire.h&gt;
+
+// ── CONFIGURAÇÃO (ALTERAR ESTES 3 VALORES) ──────────────────────
+const char* WIFI_SSID     = "NOME_DA_REDE";
+const char* WIFI_PASS     = "PASSWORD_WIFI";
+const char* MESTRE_URL    = "https://script.google.com/macros/s/AAAA.../exec";
+const char* API_TOKEN     = "nexus_eac_2026_token";
+const char* TERMINAL_NAME = "Lab Eletrónica";  // nome deste terminal
+
+// ── PINOS ────────────────────────────────────────────────────────
+#define RC522_SS   5
+#define RC522_RST  27
+#define BUZZER     25
+#define LED_GREEN  26
+#define LED_RED    33
+#define BTN_MODE   0   // BOOT button
+
+// ── OBJETOS ──────────────────────────────────────────────────────
+MFRC522 rfid(RC522_SS, RC522_RST);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
+
+// ── ESTADO ───────────────────────────────────────────────────────
+enum Mode { MODE_ENTRADA, MODE_SAIDA, MODE_REGISTO };
+Mode currentMode = MODE_ENTRADA;
+const char* modeNames[] = {"ENTRADA", "SAIDA", "REGISTO"};
+const char* modeIcons[] = {">>", "<<", "ID"};
+
+unsigned long lastCardTime = 0;
+const unsigned long CARD_COOLDOWN = 3000; // 3s entre leituras
+
+// ── SETUP ────────────────────────────────────────────────────────
+void setup() {
+  Serial.begin(115200);
+  
+  // Pinos
+  pinMode(BUZZER, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+  pinMode(BTN_MODE, INPUT_PULLUP);
+  
+  // LEDs off
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED, LOW);
+  
+  // OLED
+  oled.begin();
+  oled.setFont(u8g2_font_helvB08_tr);
+  showScreen("Nexus RFID", "A iniciar...", "");
+  
+  // SPI + RFID
+  SPI.begin();
+  rfid.PCD_Init();
+  delay(100);
+  
+  // WiFi
+  showScreen("WiFi", "A ligar...", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED &amp;&amp; attempts &lt; 30) {
+    delay(500);
+    attempts++;
+    Serial.print(".");
+  }
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    beepOk();
+    showScreen("WiFi OK", WiFi.localIP().toString().c_str(), "Pronto!");
+    Serial.println("\nWiFi connected: " + WiFi.localIP().toString());
+  } else {
+    beepError();
+    showScreen("WiFi FALHOU", "Sem ligacao", "Verificar rede");
+    Serial.println("\nWiFi FAILED");
+  }
+  
+  delay(1500);
+  showIdle();
+}
+
+// ── LOOP ─────────────────────────────────────────────────────────
+void loop() {
+  // Verificar botão de modo
+  if (digitalRead(BTN_MODE) == LOW) {
+    delay(50); // debounce
+    if (digitalRead(BTN_MODE) == LOW) {
+      currentMode = (Mode)((currentMode + 1) % 3);
+      beepMode();
+      showIdle();
+      while (digitalRead(BTN_MODE) == LOW) delay(10); // esperar soltar
+      delay(200);
+    }
+  }
+  
+  // Verificar WiFi
+  if (WiFi.status() != WL_CONNECTED) {
+    WiFi.reconnect();
+    delay(1000);
+    return;
+  }
+  
+  // Verificar cartão RFID
+  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
+    return;
+  }
+  
+  // Cooldown (evitar leituras duplicadas)
+  if (millis() - lastCardTime &lt; CARD_COOLDOWN) {
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+    return;
+  }
+  lastCardTime = millis();
+  
+  // Ler UID
+  String uid = "";
+  for (byte i = 0; i &lt; rfid.uid.size; i++) {
+    if (rfid.uid.uidByte[i] &lt; 0x10) uid += "0";
+    uid += String(rfid.uid.uidByte[i], HEX);
+  }
+  uid.toUpperCase();
+  
+  Serial.println("Card UID: " + uid);
+  
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
+  
+  // Processar
+  if (currentMode == MODE_REGISTO) {
+    handleRegisto(uid);
+  } else {
+    handlePresenca(uid);
+  }
+}
+
+// ── PRESENÇA ─────────────────────────────────────────────────────
+void handlePresenca(String uid) {
+  showScreen("A verificar...", uid.c_str(), "");
+  digitalWrite(LED_GREEN, HIGH);
+  
+  // Build JSON
+  String tipo = (currentMode == MODE_ENTRADA) ? "entrada" : "saida";
+  String json = "{\"action\":\"rfidPresenca\","
+                "\"uid\":\"" + uid + "\","
+                "\"tipo\":\"" + tipo + "\","
+                "\"terminal\":\"" + String(TERMINAL_NAME) + "\","
+                "\"token\":\"" + String(API_TOKEN) + "\"}";
+  
+  // POST to Mestre
+  String response = postToMestre(json);
+  
+  if (response.length() == 0) {
+    beepError();
+    showResult(false, "Sem resposta", "Verificar WiFi");
+    return;
+  }
+  
+  // Parse response
+  StaticJsonDocument&lt;512&gt; doc;
+  DeserializationError err = deserializeJson(doc, response);
+  
+  if (err) {
+    beepError();
+    showResult(false, "Erro JSON", err.c_str());
+    return;
+  }
+  
+  bool ok = doc["ok"] | false;
+  const char* nome = doc["nome"] | "?";
+  const char* msg = doc["msg"] | "Erro";
+  
+  if (ok) {
+    beepOk();
+    showResult(true, nome, tipo == "entrada" ? "ENTRADA OK" : "SAIDA OK");
+  } else {
+    beepError();
+    showResult(false, msg, uid.c_str());
+  }
+}
+
+// ── REGISTO (mostra UID para copiar) ─────────────────────────────
+void handleRegisto(String uid) {
+  beepMode();
+  showScreen("UID do Cartao:", uid.c_str(), "Copiar para Sheets");
+  Serial.println("REGISTO UID: " + uid);
+  delay(5000);
+  showIdle();
+}
+
+// ── HTTP POST ────────────────────────────────────────────────────
+String postToMestre(String jsonPayload) {
+  WiFiClientSecure client;
+  client.setInsecure(); // Google Apps Script usa HTTPS com redirect
+  
+  HTTPClient http;
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+  http.setTimeout(15000);
+  
+  if (!http.begin(client, MESTRE_URL)) {
+    Serial.println("HTTP begin failed");
+    return "";
+  }
+  
+  http.addHeader("Content-Type", "application/json");
+  
+  int code = http.POST(jsonPayload);
+  String response = "";
+  
+  if (code == 200 || code == 302) {
+    response = http.getString();
+  } else {
+    Serial.println("HTTP error: " + String(code));
+  }
+  
+  http.end();
+  return response;
+}
+
+// ── OLED DISPLAY ─────────────────────────────────────────────────
+void showScreen(const char* line1, const char* line2, const char* line3) {
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_helvB10_tr);
+  oled.drawStr(0, 14, line1);
+  oled.setFont(u8g2_font_helvR08_tr);
+  oled.drawStr(0, 32, line2);
+  oled.drawStr(0, 48, line3);
+  oled.sendBuffer();
+}
+
+void showIdle() {
+  oled.clearBuffer();
+  
+  // Header
+  oled.setFont(u8g2_font_helvB10_tr);
+  oled.drawStr(0, 14, "Nexus RFID");
+  
+  // Mode indicator
+  oled.setFont(u8g2_font_helvB08_tr);
+  oled.drawStr(90, 14, modeIcons[currentMode]);
+  
+  // Divider
+  oled.drawHLine(0, 18, 128);
+  
+  // Mode name
+  oled.setFont(u8g2_font_helvR08_tr);
+  oled.drawStr(0, 32, "Modo:");
+  oled.setFont(u8g2_font_helvB08_tr);
+  oled.drawStr(35, 32, modeNames[currentMode]);
+  
+  // Terminal name
+  oled.setFont(u8g2_font_helvR08_tr);
+  oled.drawStr(0, 46, TERMINAL_NAME);
+  
+  // Instruction
+  oled.drawStr(0, 60, "Passa o cartao...");
+  
+  // WiFi indicator
+  if (WiFi.status() == WL_CONNECTED) {
+    oled.drawStr(100, 60, "WiFi");
+  } else {
+    oled.drawStr(100, 60, "----");
+  }
+  
+  oled.sendBuffer();
+}
+
+void showResult(bool success, const char* line1, const char* line2) {
+  oled.clearBuffer();
+  
+  oled.setFont(u8g2_font_helvB14_tr);
+  if (success) {
+    oled.drawStr(0, 18, "\x2713"); // checkmark
+  } else {
+    oled.drawStr(0, 18, "X");
+  }
+  
+  oled.setFont(u8g2_font_helvB10_tr);
+  // Truncate line1 to fit OLED
+  char buf[22];
+  strncpy(buf, line1, 21);
+  buf[21] = '\0';
+  oled.drawStr(0, 38, buf);
+  
+  oled.setFont(u8g2_font_helvR08_tr);
+  oled.drawStr(0, 54, line2);
+  
+  oled.sendBuffer();
+  
+  // LEDs
+  if (success) {
+    digitalWrite(LED_GREEN, HIGH);
+    digitalWrite(LED_RED, LOW);
+  } else {
+    digitalWrite(LED_GREEN, LOW);
+    digitalWrite(LED_RED, HIGH);
+  }
+  
+  delay(3000);
+  
+  // Reset
+  digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED, LOW);
+  showIdle();
+}
+
+// ── BUZZER ───────────────────────────────────────────────────────
+void beepOk() {
+  tone(BUZZER, 1000, 100);
+  delay(120);
+  tone(BUZZER, 1500, 100);
+  delay(120);
+  noTone(BUZZER);
+}
+
+void beepError() {
+  tone(BUZZER, 400, 200);
+  delay(250);
+  tone(BUZZER, 300, 300);
+  delay(350);
+  noTone(BUZZER);
+}
+
+void beepMode() {
+  tone(BUZZER, 800, 80);
+  delay(100);
+  noTone(BUZZER);
+}
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="config">🔧 Configuração WiFi e URL</h2>
+
+<p>No topo do firmware, altera as 3 constantes:</p>
+
+<div class="code-block">
+const char* WIFI_SSID     = "NomeDaRedeWiFi";      // rede WiFi da escola
+const char* WIFI_PASS     = "PasswordDoWiFi";       // password da rede
+const char* MESTRE_URL    = "https://script.google.com/macros/s/AKfyc.../exec";  // URL do Mestre
+const char* API_TOKEN     = "nexus_eac_2026_token";  // mesmo token do sistema
+const char* TERMINAL_NAME = "Lab Eletrónica";        // nome identificador
+</div>
+
+<div class="note warn">
+  <span class="note-icon">⚠️</span>
+  <div>O <code>API_TOKEN</code> tem de ser <strong>exatamente igual</strong> ao que está no Code_Mestre.gs, index.html, Professor.html e Aluno.html. Se mudaste o token no sistema, muda aqui também.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="register-cards">💳 Registar Cartões dos Alunos</h2>
+
+<ol class="step-list">
+  <li>Liga o terminal ao USB e abre o <strong>Serial Monitor</strong> (115200 baud)</li>
+  <li>Pressiona o <strong>botão BOOT</strong> 2 vezes para entrar no modo <strong>REGISTO</strong> (o ecrã mostra "REGISTO")</li>
+  <li>Pede a cada aluno para <strong>passar o cartão</strong></li>
+  <li>O OLED mostra o UID (ex: <code>A3B2C1D4</code>) e o Serial Monitor imprime <code>REGISTO UID: A3B2C1D4</code></li>
+  <li>Copia o UID para o <strong>Sheets Mestre</strong> → coluna K (<strong>UID RFID</strong>) → na linha do aluno correspondente</li>
+  <li>Repete para cada aluno</li>
+  <li>Pressiona BOOT para voltar ao modo <strong>ENTRADA</strong></li>
+</ol>
+
+<div class="note info">
+  <span class="note-icon">💡</span>
+  <div>Os cartões de estudante portugueses (cartão de cidadão jovem, cartões escolares) usam MIFARE Classic 1K (13.56 MHz) — compatíveis com o RC522. Cartões de transportes (Andante, Viva Viagem) <strong>não funcionam</strong> — usam protocolo diferente.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="station-setup">🏫 Setup por Estação — Passo a Passo</h2>
+
+<h3>Estação 1: Sala de Aula (Lab Eletrónica)</h3>
+<ol class="step-list">
+  <li>Monta o hardware conforme a secção <a href="#assembly" style="color:var(--accent)">Montagem</a></li>
+  <li>No firmware, configura:
+    <div class="code-block">
+const char* WIFI_SSID     = "EscolaWiFi";
+const char* WIFI_PASS     = "pass_escola";
+const char* MESTRE_URL    = "https://script.google.com/macros/s/AKfyc.../exec";
+const char* TERMINAL_NAME = "Lab Eletrónica";
+    </div>
+  </li>
+  <li>Faz upload do firmware (Arduino IDE → botão Upload)</li>
+  <li>Verifica: OLED mostra "Nexus RFID", "Modo: ENTRADA", "WiFi"</li>
+  <li>Regista os cartões dos alunos (secção <a href="#register-cards" style="color:var(--accent)">Registar Cartões</a>)</li>
+  <li>Fixa o terminal junto à porta da sala (velcro, suporte impresso, ou caixa)</li>
+  <li>Liga à corrente USB</li>
+</ol>
+
+<h3>Estação 2: Local de Estágio (Empresa X)</h3>
+<ol class="step-list">
+  <li>Monta um segundo terminal (mesmos componentes)</li>
+  <li>Configura WiFi <strong>da empresa</strong> (pedir ao responsável):
+    <div class="code-block">
+const char* WIFI_SSID     = "EmpresaX_WiFi";
+const char* WIFI_PASS     = "pass_empresa";
+const char* TERMINAL_NAME = "Estágio - Empresa X";
+    </div>
+  </li>
+  <li>O <code>MESTRE_URL</code> e <code>API_TOKEN</code> são os mesmos — é o mesmo sistema</li>
+  <li>Faz upload e testa</li>
+  <li>Se a empresa não tiver WiFi, usa o <strong>hotspot do telemóvel</strong> do professor ou uma bateria + hotspot dedicado</li>
+</ol>
+
+<h3>Estação 3: Segunda Sala (opcional)</h3>
+<p>Mesmo processo — só muda o <code>TERMINAL_NAME</code> e eventualmente o WiFi. Todos os terminais apontam para o mesmo Sheets Mestre.</p>
+
+<div class="note success">
+  <span class="note-icon">✅</span>
+  <div><strong>Não há limite de terminais.</strong> Cada um é independente — se um falhar, os outros continuam. E o sistema de telemóvel (Aluno.html) funciona sempre como fallback.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="testing">🧪 Testes</h2>
+
+<table>
+<tr><th>#</th><th>Teste</th><th>Esperado</th></tr>
+<tr><td>1</td><td>Ligar terminal (USB)</td><td>OLED: "Nexus RFID" → "WiFi" → "A ligar..." → "WiFi OK" → ecrã idle</td></tr>
+<tr><td>2</td><td>Pressionar botão BOOT</td><td>Modo alterna: ENTRADA → SAIDA → REGISTO → ENTRADA. Bip curto.</td></tr>
+<tr><td>3</td><td>Passar cartão registado (modo ENTRADA)</td><td>OLED: "✓ David Cardoso" + "ENTRADA OK". LED verde. 2 bips agudos.</td></tr>
+<tr><td>4</td><td>Passar mesmo cartão imediatamente</td><td>Ignorado (cooldown 3s). Sem bip.</td></tr>
+<tr><td>5</td><td>Passar cartão NÃO registado</td><td>OLED: "Cartão não registado" + UID. LED vermelho. 2 bips graves.</td></tr>
+<tr><td>6</td><td>Modo SAÍDA + cartão registado</td><td>OLED: "✓ David Cardoso" + "SAIDA OK".</td></tr>
+<tr><td>7</td><td>Modo REGISTO + cartão</td><td>OLED: "UID: A3B2C1D4" + "Copiar para Sheets". Serial Monitor imprime UID.</td></tr>
+<tr><td>8</td><td>Desligar WiFi do router</td><td>OLED: "----" onde dizia "WiFi". Ao voltar, reconecta automaticamente.</td></tr>
+<tr><td>9</td><td>Verificar Sheets da turma</td><td>Folha "Presenças Estágio": nova linha com "Terminal RFID" no campo Local.</td></tr>
+<tr><td>10</td><td>Verificar Sheets Mestre</td><td>Folha "Log Acessos": linha com ação "rfidpresenca".</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="api">📡 API do Mestre (Referência)</h2>
+
+<h4>rfidPresenca</h4>
+<div class="code-block">
+<span class="code-lang">POST</span>
+// Request
+{
+  "action": "rfidPresenca",
+  "uid": "A3B2C1D4",
+  "tipo": "entrada",        // "entrada" ou "saida"
+  "terminal": "Lab Eletrónica",
+  "token": "nexus_eac_2026_token"
+}
+
+// Response (sucesso)
+{
+  "ok": true,
+  "msg": "Presença registada",
+  "nome": "David Cardoso",
+  "turma": "3.ºB EAC",
+  "id": "12045"
+}
+
+// Response (erro)
+{
+  "ok": false,
+  "msg": "Cartão não registado."
+}
+</div>
+
+<h4>rfidLookup (apenas consulta, sem registar)</h4>
+<div class="code-block">
+<span class="code-lang">POST</span>
+// Request
+{
+  "action": "rfidLookup",
+  "uid": "A3B2C1D4",
+  "token": "nexus_eac_2026_token"
+}
+
+// Response
+{
+  "ok": true,
+  "id": "12045",
+  "nome": "David Cardoso",
+  "turma": "3.ºB EAC",
+  "sheetsUrl": "https://script.google.com/macros/s/.../exec"
+}
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="troubleshooting">🔧 Resolução de Problemas</h2>
+
+<table>
+<tr><th>Problema</th><th>Causa</th><th>Solução</th></tr>
+<tr><td>OLED não liga</td><td>Ligação I2C errada</td><td>Verificar SDA→GPIO21, SCL→GPIO22, VDD→3V3</td></tr>
+<tr><td>RC522 não lê cartões</td><td>Ligação SPI ou 5V</td><td>Verificar pinout SPI. RC522 VCC→3V3 (nunca 5V!)</td></tr>
+<tr><td>WiFi não liga</td><td>SSID/password errados</td><td>Verificar no Serial Monitor (115200). Confirmar no router.</td></tr>
+<tr><td>"Acesso negado"</td><td>Token diferente</td><td>Confirmar que API_TOKEN no firmware = API_TOKEN no Code_Mestre.gs</td></tr>
+<tr><td>"Cartão não registado"</td><td>UID não está no Sheets Mestre</td><td>Modo REGISTO → copiar UID → colar na coluna K do Sheets</td></tr>
+<tr><td>"Sem URL do Sheets"</td><td>Coluna F vazia no Mestre</td><td>Preencher Sheets URL na linha do aluno no Mestre</td></tr>
+<tr><td>Bip mas nada no Sheets</td><td>Code.gs desatualizado</td><td>Reimplementar Code.gs (apagar → nova implementação)</td></tr>
+<tr><td>Leitura dupla</td><td>Cooldown curto</td><td>Aumentar CARD_COOLDOWN no firmware (default 3000ms)</td></tr>
+<tr><td>Erro HTTP 302</td><td>Redirect do Google</td><td>Já tratado pelo setFollowRedirects. Se persistir, testar URL no browser.</td></tr>
+<tr><td>Compilação falha</td><td>Biblioteca em falta</td><td>Instalar MFRC522 + U8g2 + ArduinoJson no Library Manager</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="enclosure">📦 Caixa e Montagem Final</h2>
+
+<h4>Opção A — Caixa plástica simples</h4>
+<ul>
+  <li>Caixa ABS 100×60×25mm</li>
+  <li>Recorte retangular no topo para o OLED (35×18mm)</li>
+  <li>Furo lateral para o cabo USB</li>
+  <li>RC522 colado na face interior da tampa (lê através do plástico fino)</li>
+  <li>LEDs e buzzer visíveis/audíveis do exterior</li>
+</ul>
+
+<h4>Opção B — Impressão 3D</h4>
+<ul>
+  <li>Caixa com slot para OLED, abertura para RC522, furos para LEDs</li>
+  <li>Suporte de parede integrado (velcro ou parafusos)</li>
+  <li>Ficheiro STL personalizável (futuro)</li>
+</ul>
+
+<h4>Opção C — Perfboard permanente</h4>
+<ul>
+  <li>Solda os componentes numa placa perfurada 5×7cm usando o <a href="Nexus_ESECCinfaesCTE_Perfboard.html" style="color:var(--accent)">Perfboard Designer</a></li>
+  <li>Headers fêmea para o ESP32 (removível para reprogramar)</li>
+  <li>Conectores JST para OLED e RC522 (fácil manutenção)</li>
+</ul>
+
+<div class="note info">
+  <span class="note-icon">🛠️</span>
+  <div>Para uso escolar, a <strong>Opção A</strong> (caixa plástica) é a mais prática e rápida. A <strong>Opção C</strong> (perfboard) pode ser um projeto prático para os alunos do curso EAC.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<div style="text-align:center;margin-top:40px;padding:24px;border-top:2px solid var(--border);color:var(--muted);font-size:.82rem">
+  Nexus ESECCinfãesCTE · Terminal RFID ESP32<br>
+  ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC<br>
+  Desenvolvido por Avelino A. Colaço
+</div>
+
+</main>
+
+<script>
+function showTab(id){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>
