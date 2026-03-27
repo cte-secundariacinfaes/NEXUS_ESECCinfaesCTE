@@ -165,7 +165,9 @@ tr:nth-child(even){background:#F8FAFC}
   <div class="sb-section">
     <div class="sb-section-title">Referência</div>
     <a class="sb-link" href="#ref-sheets"><span class="sb-link-icon">📊</span> Folhas do Sheets</a>
+    <a class="sb-link" href="#ref-horario"><span class="sb-link-icon">📅</span> Horário Semanal</a>
     <a class="sb-link" href="#ref-login"><span class="sb-link-icon">🔑</span> Login Central</a>
+    <a class="sb-link" href="Nexus_ESECCinfaesCTE_ESP32_RFID.html"><span class="sb-link-icon">🔌</span> Terminal RFID ESP32</a>
     <a class="sb-link" href="#ref-offline"><span class="sb-link-icon">📵</span> Modo Offline</a>
     <a class="sb-link" href="#ref-qrsessao"><span class="sb-link-icon">📲</span> QR por Sessão</a>
     <a class="sb-link" href="#ref-problemas"><span class="sb-link-icon">🔧</span> Resolução de Problemas</a>
@@ -586,6 +588,31 @@ tr:nth-child(even){background:#F8FAFC}
 <!-- LOGIN CENTRALIZADO                                            -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 
+
+<h2 id="ref-horario">📅 Horário Semanal</h2>
+
+<p>O separador <strong>📅 Horário</strong> (dentro de 📝 Aulas Práticas) permite definir o horário semanal e gerar sessões automaticamente.</p>
+
+<h4>Definir o Horário</h4>
+<ol class="step-list">
+  <li>Vai a <strong>📝 Aulas → 📅 Horário</strong></li>
+  <li>Para cada aula: seleciona dia, hora início, hora fim, disciplina e módulo</li>
+  <li>Clica <strong>＋ Adicionar</strong> — o slot aparece na tabela</li>
+  <li>O horário é completamente flexível: qualquer hora, qualquer duração</li>
+</ol>
+
+<h4>Gerar Sessões da Semana</h4>
+<ol class="step-list">
+  <li>Clica <strong>📅 Gerar Sessões da Semana</strong></li>
+  <li>Indica a data da segunda-feira (sugerida automaticamente)</li>
+  <li>O sistema cria todas as sessões com datas concretas</li>
+  <li>Sessões duplicadas são ignoradas — seguro para re-gerar</li>
+  <li>Vai ao separador <strong>📅 Sessões</strong> e clica <strong>▶ Abrir</strong> na aula que vais dar</li>
+</ol>
+
+<h4>Exportar e Importar</h4>
+<p>O horário pode ser guardado como ficheiro <code>.horario.json</code> e reutilizado todos os períodos. O ficheiro é pequeno e contém apenas a estrutura do horário, não as sessões geradas.</p>
+
 <h2 id="ref-login">🔑 Login Centralizado (Opção C)</h2>
 
 <p>O sistema suporta <strong>autenticação centralizada</strong> via um Google Sheets Mestre. Os alunos e o professor fazem login com nº de aluno (ou username) e password — o sistema configura tudo automaticamente.</p>
@@ -623,8 +650,7 @@ tr:nth-child(even){background:#F8FAFC}
   <div>Para gerar o hash da password, abre a consola do browser (F12) no index.html e escreve: <code>hashPwd('password123')</code>. Ou adiciona a password em texto claro — o sistema faz hash automaticamente no primeiro login.</div>
 </div>
 
-<h4>Acesso direto (fallback)</h4>
-<p>Se o Sheets Mestre não estiver disponível, o index.html tem um link <strong>"Acesso direto →"</strong> que abre o Professor ou Aluno como antes, sem login centralizado. Tudo continua a funcionar — o login é uma camada adicional, não uma substituição.</p>
+
 
 <h4>Preparação para RFID</h4>
 <p>A coluna <strong>"UID RFID"</strong> na folha Utilizadores permite futuramente associar cartões de aluno a terminais ESP32 com leitor RFID. O <code>Code_Mestre.gs</code> já inclui as ações <code>rfidLookup</code> e <code>rfidPresenca</code> para este efeito.</p>
