@@ -5201,8 +5201,8 @@ function getProfPwd(){  var v=ls(KEY_PWD_PROF) ||DEFAULT_PWD_PROF;  return v.sta
 
 function isAdminUnlocked(){ try{return sessionStorage.getItem(KEY_AUTH)==='1';}catch(e){return false;} }
 // Admin unlocks everything
-function unlockAdmin(){ try{unlockAdmin();sessionStorage.setItem(KEY_STATS_AUTH,'1');sessionStorage.setItem(KEY_PAUTH,'1');}catch(e){} }
-function setAdminUnlocked(){ try{unlockAdmin();}catch(e){} }
+function unlockAdmin(){ try{sessionStorage.setItem(KEY_AUTH,'1');sessionStorage.setItem(KEY_STATS_AUTH,'1');sessionStorage.setItem(KEY_PAUTH,'1');}catch(e){} }
+function setAdminUnlocked(){ unlockAdmin(); }
 function isStatsUnlocked(){ try{return sessionStorage.getItem(KEY_STATS_AUTH)==='1';}catch(e){return false;} }
 function setStatsUnlocked(){ try{sessionStorage.setItem(KEY_STATS_AUTH,'1');}catch(e){} }
 function isProfUnlocked(){  try{return sessionStorage.getItem(KEY_PAUTH)==='1';}catch(e){return false;} }
