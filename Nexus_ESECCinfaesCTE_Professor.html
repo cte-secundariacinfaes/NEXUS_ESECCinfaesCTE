@@ -1302,24 +1302,19 @@ body[data-mode="student"] .turma-bar{display:none!important}
   <div class="card">
     <div class="card-title"><span class="ct-icon">🔑</span> Senhas de Acesso</div>
     <p style="font-size:.81rem;color:var(--muted);margin-bottom:14px">
-      Três senhas independentes protegem as áreas restritas. As senhas ficam guardadas <em>neste dispositivo</em>.<br>
-      <strong>⚠️ Não partilhes o ficheiro HTML publicamente — distribui apenas o QR code.</strong>
+      Duas senhas protegem as áreas restritas. A senha do professor dá acesso a tudo.<br>
+      <strong>⚠️ Não partilhes a senha do professor com os alunos.</strong>
     </p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:14px">
       <div class="session-field">
-        <label>🔒 Senha — ⚙️ Gerir e 🎲 Sorteio</label>
+        <label>👨‍🏫 Senha do Professor — acesso total</label>
         <input type="password" id="cfg-pwd-admin" placeholder="Nova senha…" autocomplete="new-password">
-        <span style="font-size:.68rem;color:var(--muted);margin-top:3px">Atual: <span id="lbl-pwd-admin">eac2025</span></span>
+        <span style="font-size:.68rem;color:var(--muted);margin-top:3px">Atual: <span id="lbl-pwd-admin">••••••</span></span>
       </div>
       <div class="session-field">
-        <label>📈 Senha — Resultados dos Pares</label>
+        <label>🎓 Senha dos Alunos — ver resultados</label>
         <input type="password" id="cfg-pwd-stats" placeholder="Nova senha…" autocomplete="new-password">
-        <span style="font-size:.68rem;color:var(--muted);margin-top:3px">Atual: <span id="lbl-pwd-stats">stats2025</span></span>
-      </div>
-      <div class="session-field">
-        <label>📋 Senha — Área do Professor</label>
-        <input type="password" id="cfg-pwd-prof" placeholder="Nova senha…" autocomplete="new-password">
-        <span style="font-size:.68rem;color:var(--muted);margin-top:3px">Atual: <span id="lbl-pwd-prof">prof2025</span></span>
+        <span style="font-size:.68rem;color:var(--muted);margin-top:3px">Atual: <span id="lbl-pwd-stats">••••••</span></span>
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -5205,7 +5200,9 @@ function getStatsPwd(){ var v=ls(KEY_PWD_STATS)||DEFAULT_PWD_STATS; return v.sta
 function getProfPwd(){  var v=ls(KEY_PWD_PROF) ||DEFAULT_PWD_PROF;  return v.startsWith('h_')?v:hashPwdSync(v); }
 
 function isAdminUnlocked(){ try{return sessionStorage.getItem(KEY_AUTH)==='1';}catch(e){return false;} }
-function setAdminUnlocked(){ try{sessionStorage.setItem(KEY_AUTH,'1');}catch(e){} }
+// Admin unlocks everything
+function unlockAdmin(){ try{unlockAdmin();sessionStorage.setItem(KEY_STATS_AUTH,'1');sessionStorage.setItem(KEY_PAUTH,'1');}catch(e){} }
+function setAdminUnlocked(){ try{unlockAdmin();}catch(e){} }
 function isStatsUnlocked(){ try{return sessionStorage.getItem(KEY_STATS_AUTH)==='1';}catch(e){return false;} }
 function setStatsUnlocked(){ try{sessionStorage.setItem(KEY_STATS_AUTH,'1');}catch(e){} }
 function isProfUnlocked(){  try{return sessionStorage.getItem(KEY_PAUTH)==='1';}catch(e){return false;} }
@@ -5301,17 +5298,14 @@ function loadPwdLabels(){
 async function savePwds(){
   const a=document.getElementById('cfg-pwd-admin')?.value.trim();
   const s=document.getElementById('cfg-pwd-stats')?.value.trim();
-  const p=document.getElementById('cfg-pwd-prof')?.value.trim();
-  if(!a&&!s&&!p){ toast('Introduz pelo menos uma senha nova.','warn'); return; }
-  if(a){ if(a.length<4){toast('Senha demasiado curta (mín. 4 caracteres).','warn');return;} ls(KEY_PWD_ADMIN,hashPwdSync(a)); }
+  if(!a&&!s){ toast('Introduz pelo menos uma senha nova.','warn'); return; }
+  if(a){ if(a.length<4){toast('Senha demasiado curta (mín. 4 caracteres).','warn');return;} var ha=hashPwdSync(a); ls(KEY_PWD_ADMIN,ha); ls(KEY_PWD_PROF,ha); }
   if(s){ if(s.length<4){toast('Senha demasiado curta (mín. 4 caracteres).','warn');return;} ls(KEY_PWD_STATS,hashPwdSync(s)); }
-  if(p){ if(p.length<4){toast('Senha demasiado curta (mín. 4 caracteres).','warn');return;} ls(KEY_PWD_PROF,hashPwdSync(p)); }
   // Invalidate current sessions — must re-authenticate
   try{sessionStorage.removeItem(KEY_AUTH);sessionStorage.removeItem(KEY_STATS_AUTH);
       sessionStorage.removeItem(KEY_PAUTH);}catch(_){}
   document.getElementById('cfg-pwd-admin').value='';
   document.getElementById('cfg-pwd-stats').value='';
-  document.getElementById('cfg-pwd-prof').value='';
   loadPwdLabels();
   const info=document.getElementById('pwd-info');
   if(info){info.style.display='block';
@@ -5398,6 +5392,7 @@ async function _mestrePost(payload){
   var url = _getMestreUrl();
   if(!url){ toast('⚠️ URL do Mestre não configurado. Faz login pelo index.html primeiro.','warn'); return null; }
   payload.token = 'nexus_eac_2026_token';
+  payload._requesterTipo = 'prof';
   try{
     var r = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain'},
       body:JSON.stringify(payload)});
