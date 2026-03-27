@@ -76,6 +76,13 @@ Aluno.html      ──🔄 Carregar───→  Google Sheets (lê config + esc
 - 100% offline — não precisa de Google Sheets
 
 
+### 📅 Horário Semanal
+- Definir horário semanal com horas flexíveis (qualquer hora/duração)
+- Gerar sessões de aula automaticamente para a semana
+- Exportar/importar horário como ficheiro `.horario.json`
+- Reutilizável entre semanas e anos letivos
+- Detecção de duplicados ao re-gerar
+
 ### 📡 Terminal ESP32 RFID
 - Presenças por cartão de aluno — sem telemóvel, sem códigos
 - Hardware: ESP32 + RC522 + OLED SSH1106 + Buzzer + LEDs (~12€/estação)
@@ -93,7 +100,6 @@ Aluno.html      ──🔄 Carregar───→  Google Sheets (lê config + esc
 - Sessão de 7 dias no browser (localStorage)
 - Auto-configuração do Sheets URL, nome, e códigos de acesso
 - Nº de aluno incluído em todos os registos (votos, autoavaliação, presenças)
-- Fallback para acesso direto sem login (retrocompatível)
 - Preparado para terminais RFID (ESP32 + leitor de cartões)
 
 ---
