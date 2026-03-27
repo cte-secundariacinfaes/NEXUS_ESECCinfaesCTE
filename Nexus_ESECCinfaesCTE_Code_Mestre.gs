@@ -92,9 +92,10 @@ function doPost(e) {
     }
 
     // ── Role-based access control ──
-    var tipo = String(payload.tipo || "prof").toLowerCase();
+    // _requesterTipo = who is making the request (not the user being added/edited)
+    var requesterTipo = String(payload._requesterTipo || payload.tipo || "prof").toLowerCase();
     var ALUNO_MESTRE_ACTIONS = ["login","ping"];
-    if (tipo === "aluno" && ALUNO_MESTRE_ACTIONS.indexOf(action) < 0) {
+    if (requesterTipo === "aluno" && ALUNO_MESTRE_ACTIONS.indexOf(action) < 0) {
       return jsonResp({ok: false, msg: "Ação não permitida para alunos."});
     }
 
@@ -353,12 +354,27 @@ function handleRfidPresenca(ss, d) {
   var lookup = handleRfidLookup(ss, d);
   if (!lookup.ok) return lookup;
 
-  // 2. Forward the presença to the turma's Sheets
+  // 2. Get turma Sheets URL
   var sheetsUrl = lookup.sheetsUrl;
-  if (!sheetsUrl) return {ok: false, msg: "Sem URL do Sheets configurado para " + lookup.nome};
+  if (!sheetsUrl) return {ok: false, msg: "Sem URL do Sheets para " + lookup.nome};
 
-  try {
-    var payload = {
+  var mode = String(d.mode || "estagio").toLowerCase();
+  var payload;
+
+  if (mode === "aula") {
+    // ── Aula mode: send rfidAulaRegisto ──
+    payload = {
+      action: "rfidaularegisto",
+      alunoId: "rfid_" + String(d.uid).trim(),
+      alunoNome: lookup.nome,
+      nAluno: lookup.id,
+      tipo: d.tipo || "entrada",
+      terminal: d.terminal || "Terminal RFID",
+      token: API_TOKEN
+    };
+  } else {
+    // ── Estágio mode: send presencaRegisto ──
+    payload = {
       action: "presencaRegisto",
       alunoId: "rfid_" + String(d.uid).trim(),
       alunoNome: lookup.nome,
@@ -372,14 +388,18 @@ function handleRfidPresenca(ss, d) {
       valid: true,
       localNome: d.terminal || "Terminal RFID",
       atraso: 0,
-      pontualidade: ""
+      pontualidade: d.tipo === "entrada" ? "presente" : "",
+      token: API_TOKEN
     };
+  }
 
+  try {
     var options = {
       method: "post",
       contentType: "application/json",
       payload: JSON.stringify(payload),
-      muteHttpExceptions: true
+      muteHttpExceptions: true,
+      followRedirects: true
     };
 
     var response = UrlFetchApp.fetch(sheetsUrl, options);
@@ -390,7 +410,8 @@ function handleRfidPresenca(ss, d) {
       msg: result.ok ? "Presença registada" : (result.msg || "Erro"),
       nome: lookup.nome,
       turma: lookup.turma,
-      id: lookup.id
+      id: lookup.id,
+      mode: mode
     };
   } catch(e) {
     return {ok: false, msg: "Erro ao registar: " + e.message, nome: lookup.nome};
