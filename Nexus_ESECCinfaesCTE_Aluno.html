@@ -1588,6 +1588,7 @@ body[data-mode="student"] .turma-bar{display:none!important}
       <button class="prof-tab"        id="ptab-aulas-alunos" onclick="aulasTab('alunos',this)">👥 Alunos</button>
       <button class="prof-tab"        id="ptab-aulas-dash"   onclick="aulasTab('dash',this)">📊 Painel</button>
       <button class="prof-tab"        id="ptab-aulas-relat"  onclick="aulasTab('relat',this)">📄 Relatórios</button>
+      <button class="prof-tab"        id="ptab-aulas-horario" onclick="aulasTab('horario',this)">📅 Horário</button>
     </div>
 
     <!-- ── SESSÕES ── -->
@@ -1688,6 +1689,59 @@ body[data-mode="student"] .turma-bar{display:none!important}
     </div>
 
     <!-- ── RELATÓRIOS ── -->
+
+    <!-- ── HORÁRIO ── -->
+    <div id="aulas-pview-horario" style="display:none">
+
+      <div class="card" style="border:2px solid var(--gold)">
+        <div class="card-title"><span class="ct-icon">📅</span> Horário Semanal</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Define o horário semanal e gera sessões automaticamente. Horários flexíveis — qualquer hora entre 08:00 e 18:00.</p>
+
+        <!-- Add slot form -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:14px">
+          <div style="flex:1;min-width:100px">
+            <label style="font-size:.72rem;font-weight:600;color:var(--muted);display:block;margin-bottom:2px">Dia</label>
+            <select id="hor-dia" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem">
+              <option value="1">Segunda</option>
+              <option value="2">Terça</option>
+              <option value="3">Quarta</option>
+              <option value="4">Quinta</option>
+              <option value="5">Sexta</option>
+            </select>
+          </div>
+          <div style="min-width:90px">
+            <label style="font-size:.72rem;font-weight:600;color:var(--muted);display:block;margin-bottom:2px">Início</label>
+            <input type="time" id="hor-inicio" value="08:30" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem">
+          </div>
+          <div style="min-width:90px">
+            <label style="font-size:.72rem;font-weight:600;color:var(--muted);display:block;margin-bottom:2px">Fim</label>
+            <input type="time" id="hor-fim" value="10:00" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem">
+          </div>
+          <div style="flex:2;min-width:180px">
+            <label style="font-size:.72rem;font-weight:600;color:var(--muted);display:block;margin-bottom:2px">Disciplina / UFCD</label>
+            <input type="text" id="hor-disc" placeholder="ex: EE 6016" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem">
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label style="font-size:.72rem;font-weight:600;color:var(--muted);display:block;margin-bottom:2px">Módulo (opcional)</label>
+            <input type="text" id="hor-mod" placeholder="ex: Módulo 1" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="horarioAddSlot()" style="background:var(--gold)">＋ Adicionar</button>
+        </div>
+
+        <!-- Schedule grid -->
+        <div id="hor-grid" style="margin-bottom:14px"></div>
+
+        <!-- Actions -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+          <button class="btn btn-primary btn-sm" onclick="horarioGerarSemana()" style="background:var(--green)">📅 Gerar Sessões da Semana</button>
+          <button class="btn btn-outline btn-sm" onclick="horarioExport()">💾 Exportar Horário</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('hor-import-file').click()">📂 Importar Horário</button>
+          <input type="file" id="hor-import-file" accept=".json,.horario.json" style="display:none" onchange="horarioImport(event)">
+          <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="horarioLimpar()">🗑️ Limpar Tudo</button>
+        </div>
+      </div>
+    </div>
+
     <div id="aulas-pview-relat" style="display:none">
       <div class="card">
         <div class="card-title"><span class="ct-icon">📄</span> Relatórios de Presenças</div>
@@ -4765,6 +4819,400 @@ async function setupConnect(){
 }
 
 
+
+
+
+// ── GESTÃO UTILIZADORES (MESTRE) ────────────────────────────────────
+var _mestreUsers = [];
+
+function _getMestreUrl(){
+  return localStorage.getItem('nexus_mestre_url') || '';
+}
+
+async function _mestrePost(payload){
+  var url = _getMestreUrl();
+  if(!url){ toast('⚠️ URL do Mestre não configurado. Faz login pelo index.html primeiro.','warn'); return null; }
+  payload.token = 'nexus_eac_2026_token';
+  try{
+    var r = await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify(payload)});
+    return await r.json();
+  }catch(e){
+    toast('❌ Erro de ligação ao Mestre.','warn');
+    return null;
+  }
+}
+
+async function mestreLoadUsers(){
+  var st = document.getElementById('mestre-users-status')||null;
+  st.textContent = '⏳ A carregar...';
+  var turma = '';
+  var t = getActiveTurma();
+  if(t) turma = t.nome || '';
+  var res = await _mestrePost({action:'getUsers', turma:turma});
+  if(!res){ st.textContent = ''; return; }
+  if(!res.ok){ st.textContent = '❌ '+res.msg; return; }
+  _mestreUsers = res.users || [];
+  st.textContent = _mestreUsers.length + ' utilizador(es)';
+  _renderMestreUsers();
+}
+
+function _renderMestreUsers(){
+  var el = document.getElementById('mestre-users-table')||null;
+  if(!_mestreUsers.length){
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)">Sem utilizadores registados nesta turma.</div>';
+    return;
+  }
+  var out = '<table style="width:100%;border-collapse:collapse;font-size:.78rem">';
+  out += '<tr><th style="background:var(--navy);color:#fff;padding:5px 8px;text-align:left">Tipo</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:5px 8px;text-align:left">ID</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:5px 8px;text-align:left">Nome</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:5px 8px;text-align:left">Turma</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:5px 8px;text-align:left">RFID</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:5px 8px;text-align:center">Ativo</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:5px 8px;width:60px"></th></tr>';
+  _mestreUsers.forEach(function(u,i){
+    var bg = i%2===0 ? '#fff' : '#F8FAFC';
+    var badge = u.tipo==='prof' ? '<span style="background:#EFF6FF;color:#1E40AF;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700">Prof</span>' :
+                '<span style="background:#F0FDF4;color:#065F46;padding:1px 6px;border-radius:4px;font-size:.68rem;font-weight:700">Aluno</span>';
+    var ativo = u.ativo ? '✅' : '❌';
+    out += '<tr style="background:'+bg+'">';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border)">'+badge+'</td>';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border);font-weight:600">'+escHtml(u.id)+'</td>';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border)">'+escHtml(u.nome)+'</td>';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border);font-size:.72rem;color:var(--muted)">'+escHtml(u.turma)+'</td>';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border);font-family:monospace;font-size:.7rem;color:var(--accent)">'+escHtml(u.uidRfid||'—')+'</td>';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:center">'+ativo+'</td>';
+    out += '<td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:center">';
+    out += '<button data-uid="'+escHtml(u.id)+'" onclick="mestreToggleUser(this.dataset.uid)" style="background:none;border:none;cursor:pointer;font-size:.8rem" title="'+(u.ativo?'Desativar':'Ativar')+'">🔄</button> ';
+    out += '<button data-uid="'+escHtml(u.id)+'" onclick="mestreRemoveUser(this.dataset.uid)" style="background:none;border:none;cursor:pointer;font-size:.8rem;color:var(--red)" title="Remover">🗑️</button>';
+    out += '</td></tr>';
+  });
+  out += '</table>';
+  el.innerHTML = out;
+}
+
+function mestreShowAddForm(){
+  (document.getElementById('mestre-add-form')||{}).style.display = 'block';
+  (document.getElementById('mestre-bulk-form')||{}).style.display = 'none';
+  (document.getElementById('mu-id')||{}).focus();
+}
+
+function mestreShowBulkForm(){
+  (document.getElementById('mestre-bulk-form')||{}).style.display = 'block';
+  (document.getElementById('mestre-add-form')||{}).style.display = 'none';
+  (document.getElementById('mu-bulk')||{}).focus();
+}
+
+async function mestreAddUser(){
+  var tipo = (document.getElementById('mu-tipo')||{}).value;
+  var id   = (document.getElementById('mu-id')||{}).value.trim();
+  var nome = (document.getElementById('mu-nome')||{}).value.trim();
+  var pwd  = (document.getElementById('mu-pwd')||{}).value.trim();
+  var codEst = (document.getElementById('mu-codest')||{}).value.trim();
+  var codAu  = (document.getElementById('mu-codaulas')||{}).value.trim();
+  if(!id || !nome){ toast('Nº/ID e nome são obrigatórios.','warn'); return; }
+
+  var t = getActiveTurma();
+  var sheetsUrl = getURL() || '';
+
+  var res = await _mestrePost({
+    action:'addUser',
+    tipo: tipo,
+    id: id,
+    nome: nome,
+    pwd: pwd || id,
+    turma: t ? t.nome : '',
+    sheetsUrl: sheetsUrl,
+    codigoEstagio: codEst || id,
+    codigoAulas: codAu || id,
+    pwdAulas: codAu || id,
+    ativo: true
+  });
+  if(!res) return;
+  if(res.ok){
+    toast('✅ '+nome+' adicionado!','ok');
+    (document.getElementById('mu-id')||{}).value = '';
+    (document.getElementById('mu-nome')||{}).value = '';
+    (document.getElementById('mu-pwd')||{}).value = '';
+    (document.getElementById('mu-codest')||{}).value = '';
+    (document.getElementById('mu-codaulas')||{}).value = '';
+    mestreLoadUsers();
+  } else {
+    toast('❌ '+res.msg,'warn');
+  }
+}
+
+async function mestreBulkAdd(){
+  var text = (document.getElementById('mu-bulk')||{}).value.trim();
+  if(!text){ toast('Cola a lista de alunos.','warn'); return; }
+  var lines = text.split('\n').filter(function(l){ return l.trim(); });
+  var t = getActiveTurma();
+  var turma = t ? t.nome : '';
+  var sheetsUrl = getURL() || '';
+  var added = 0, errors = 0;
+
+  for(var i = 0; i < lines.length; i++){
+    var parts = lines[i].split(/[;\t]/).map(function(p){ return p.trim(); });
+    var id = parts[0] || '';
+    var nome = parts[1] || '';
+    var pwd = parts[2] || id;
+    if(!id || !nome){ errors++; continue; }
+    var res = await _mestrePost({
+      action:'addUser',
+      tipo:'aluno',
+      id: id,
+      nome: nome,
+      pwd: pwd,
+      turma: turma,
+      sheetsUrl: sheetsUrl,
+      codigoEstagio: id,
+      codigoAulas: id,
+      pwdAulas: id,
+      ativo: true
+    });
+    if(res && res.ok) added++;
+    else errors++;
+  }
+
+  toast('📋 '+added+' adicionado(s), '+errors+' erro(s).',added>0?'ok':'warn');
+  (document.getElementById('mu-bulk')||{}).value = '';
+  (document.getElementById('mestre-bulk-form')||{}).style.display = 'none';
+  mestreLoadUsers();
+}
+
+async function mestreToggleUser(id){
+  var u = _mestreUsers.find(function(x){ return x.id === id; });
+  if(!u) return;
+  var newState = !u.ativo;
+  var res = await _mestrePost({action:'updateUser', id:id, ativo:newState});
+  if(res && res.ok){
+    toast((newState?'✅ Ativado':'🔴 Desativado')+': '+u.nome,'ok');
+    mestreLoadUsers();
+  } else {
+    toast('❌ '+(res?res.msg:'Erro'),'warn');
+  }
+}
+
+async function mestreRemoveUser(id){
+  var u = _mestreUsers.find(function(x){ return x.id === id; });
+  if(!u) return;
+  if(!confirm('Remover '+u.nome+' ('+id+') do Sheets Mestre?')) return;
+  var res = await _mestrePost({action:'removeUser', id:id});
+  if(res && res.ok){
+    toast('🗑️ '+u.nome+' removido.','ok');
+    mestreLoadUsers();
+  } else {
+    toast('❌ '+(res?res.msg:'Erro'),'warn');
+  }
+}
+
+// ── HORÁRIO SEMANAL ─────────────────────────────────────────────────
+var KEY_HORARIO = 'nexus_horario';
+function loadHorario(){
+  var t = getActiveTurma();
+  var key = t ? 't_'+t.id+'_'+KEY_HORARIO : KEY_HORARIO;
+  return ls(key) || {nome:'',turma:'',ano:'',slots:[]};
+}
+function saveHorario(h){
+  var t = getActiveTurma();
+  var key = t ? 't_'+t.id+'_'+KEY_HORARIO : KEY_HORARIO;
+  ls(key, h);
+}
+
+var _DIAS_PT = ['','Segunda','Terça','Quarta','Quinta','Sexta'];
+
+function horarioAddSlot(){
+  var dia    = Number(document.getElementById('hor-dia').value);
+  var inicio = document.getElementById('hor-inicio').value;
+  var fim    = document.getElementById('hor-fim').value;
+  var disc   = document.getElementById('hor-disc').value.trim();
+  var mod    = document.getElementById('hor-mod').value.trim();
+  if(!inicio || !fim || !disc){ toast('Preenche dia, horas e disciplina.','warn'); return; }
+  if(inicio >= fim){ toast('A hora de fim deve ser depois do início.','warn'); return; }
+  var h = loadHorario();
+  h.slots.push({
+    id: 'hs_'+Date.now().toString(36),
+    dia: dia,
+    horaInicio: inicio,
+    horaFim: fim,
+    disciplina: disc,
+    modulo: mod,
+    tolerancia: 10,
+    toleranciaFalta: 15
+  });
+  h.slots.sort(function(a,b){ return a.dia - b.dia || a.horaInicio.localeCompare(b.horaInicio); });
+  saveHorario(h);
+  document.getElementById('hor-disc').value = '';
+  document.getElementById('hor-mod').value = '';
+  renderHorario();
+  toast('✅ Slot adicionado!','ok');
+}
+
+function horarioRemoveSlot(id){
+  var h = loadHorario();
+  h.slots = h.slots.filter(function(s){ return s.id !== id; });
+  saveHorario(h);
+  renderHorario();
+}
+
+function renderHorario(){
+  var h = loadHorario();
+  var el = document.getElementById('hor-grid');
+  if(!el) return;
+  if(!h.slots.length){
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:.85rem">Sem slots definidos. Adiciona aulas ao horário acima.</div>';
+    return;
+  }
+  // Group by day
+  var days = {};
+  h.slots.forEach(function(s){
+    if(!days[s.dia]) days[s.dia] = [];
+    days[s.dia].push(s);
+  });
+  var out = '<table style="width:100%;border-collapse:collapse;font-size:.82rem">';
+  out += '<tr><th style="background:var(--navy);color:#fff;padding:6px 10px;text-align:left;width:90px">Dia</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:6px 10px;text-align:left;width:110px">Horário</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:6px 10px;text-align:left">Disciplina</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:6px 10px;text-align:left">Módulo</th>';
+  out += '<th style="background:var(--navy);color:#fff;padding:6px 10px;width:40px"></th></tr>';
+  for(var d = 1; d <= 5; d++){
+    if(!days[d]) continue;
+    var first = true;
+    days[d].forEach(function(s){
+      var bg = d % 2 === 0 ? '#F8FAFC' : '#fff';
+      out += '<tr style="background:'+bg+'">';
+      if(first){
+        out += '<td style="padding:6px 10px;font-weight:700;color:var(--navy);border-bottom:1px solid var(--border)" rowspan="'+days[d].length+'">'+_DIAS_PT[d]+'</td>';
+        first = false;
+      }
+      var durMin = _calcDurMin(s.horaInicio, s.horaFim);
+      out += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap">'+escHtml(s.horaInicio)+' — '+escHtml(s.horaFim)+' <span style="font-size:.7rem;color:var(--muted)">('+durMin+'min)</span></td>';
+      out += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);font-weight:600">'+escHtml(s.disciplina)+'</td>';
+      out += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">'+escHtml(s.modulo||'—')+'</td>';
+      out += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:center"><button data-hrid="'+s.id+'" onclick="horarioRemoveSlot(this.dataset.hrid)" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:.9rem" title="Remover">✕</button></td>';
+      out += '</tr>';
+    });
+  }
+  out += '</table>';
+  out += '<div style="font-size:.72rem;color:var(--muted);margin-top:6px">'+h.slots.length+' aula(s) no horário</div>';
+  el.innerHTML = out;
+}
+
+function _calcDurMin(inicio, fim){
+  var p1 = inicio.split(':'), p2 = fim.split(':');
+  return (Number(p2[0])*60+Number(p2[1])) - (Number(p1[0])*60+Number(p1[1]));
+}
+
+// ── Gerar sessões da semana ─────────────────────────────────────────
+async function horarioGerarSemana(){
+  var h = loadHorario();
+  if(!h.slots.length){ toast('Horário vazio. Adiciona slots primeiro.','warn'); return; }
+
+  // Ask for the Monday date
+  var monday = prompt('Data da segunda-feira da semana a gerar:\n(formato: AAAA-MM-DD)', _getNextMonday());
+  if(!monday) return;
+
+  var mondayDate = new Date(monday+'T00:00:00');
+  if(isNaN(mondayDate.getTime())){ toast('Data inválida.','warn'); return; }
+  // Ensure it's a Monday
+  if(mondayDate.getDay() !== 1){
+    var confirmed = confirm('A data '+monday+' não é uma segunda-feira. Gerar mesmo assim a partir desta data?');
+    if(!confirmed) return;
+  }
+
+  var cfg = loadAulasCfg();
+  var created = 0, skipped = 0;
+
+  h.slots.forEach(function(slot){
+    // Calculate the actual date for this slot
+    var slotDate = new Date(mondayDate);
+    slotDate.setDate(slotDate.getDate() + (slot.dia - 1)); // dia 1=Mon, 2=Tue...
+    var dateStr = slotDate.toISOString().substring(0,10);
+    var durMin = _calcDurMin(slot.horaInicio, slot.horaFim);
+
+    // Check for duplicate (same disc + same date + same hora)
+    var exists = cfg.sessoes.some(function(s){
+      return s.disciplina === slot.disciplina && s.data === dateStr && s.horaInicio === slot.horaInicio;
+    });
+    if(exists){ skipped++; return; }
+
+    cfg.sessoes.push({
+      id: 's_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,5),
+      disciplina: slot.disciplina,
+      modulo: slot.modulo || '',
+      sumario: '',
+      data: dateStr,
+      horaInicio: slot.horaInicio,
+      duracao: durMin,
+      tolPont: slot.tolerancia || 10,
+      tolFalta: slot.toleranciaFalta || 15,
+      aberta: false,
+      registos: {}
+    });
+    created++;
+  });
+
+  saveAulasCfg(cfg);
+  renderAulasSessions();
+  aulasTab('sess', document.getElementById('ptab-aulas-sess'));
+  toast('📅 '+created+' sessão(ões) criada(s)' + (skipped ? ', '+skipped+' já existiam' : '') + '!', created > 0 ? 'ok' : 'warn');
+}
+
+function _getNextMonday(){
+  var d = new Date();
+  var day = d.getDay();
+  var diff = (day === 0) ? 1 : (8 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().substring(0,10);
+}
+
+// ── Export / Import ─────────────────────────────────────────────────
+function horarioExport(){
+  var h = loadHorario();
+  if(!h.slots.length){ toast('Horário vazio.','warn'); return; }
+  var t = getActiveTurma();
+  h.nome = 'Horário '+(t?t.nome:'')+(t?' '+t.ano:'');
+  h.turma = t?t.nome:'';
+  h.ano = t?t.ano:'';
+  var blob = new Blob([JSON.stringify(h, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'horario_'+(t?t.nome.replace(/[^a-zA-Z0-9]/g,'_'):'nexus')+'.horario.json';
+  a.click();
+  toast('💾 Horário exportado!','ok');
+}
+
+function horarioImport(event){
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var data = JSON.parse(e.target.result);
+      if(!data.slots || !Array.isArray(data.slots)){ toast('Ficheiro inválido.','warn'); return; }
+      // Ensure IDs
+      data.slots.forEach(function(s){ if(!s.id) s.id = 'hs_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,4); });
+      saveHorario(data);
+      renderHorario();
+      toast('📂 Horário importado: '+data.slots.length+' slots!','ok');
+    }catch(err){
+      toast('❌ Erro ao ler ficheiro: '+err.message,'warn');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function horarioLimpar(){
+  if(!confirm('Limpar todo o horário?')) return;
+  saveHorario({nome:'',turma:'',ano:'',slots:[]});
+  renderHorario();
+  toast('🗑️ Horário limpo.','ok');
+}
+
+
+
 // ── Sheets URL Setup (global for student) ───────────────────────
 function showSheetsSetup(){
   document.querySelectorAll('.view').forEach(function(x){x.style.display='none';x.classList.remove('active');});
@@ -6451,7 +6899,7 @@ function renderAulasView(){
 }
 
 function aulasTab(tab,btn){
-  ['sess','alunos','dash','relat'].forEach(t=>{
+  ['sess','alunos','dash','relat','horario'].forEach(t=>{
     const el=document.getElementById('aulas-pview-'+t);
     if(el) el.style.display = t===tab?'block':'none';
   });
@@ -6461,6 +6909,7 @@ function aulasTab(tab,btn){
   if(tab==='alunos') renderAulasAlunos();
   if(tab==='dash'){ aulasRefreshDash(); aulasStartAutoRefresh(); } else { aulasStopAutoRefresh(); }
   if(tab==='relat') aulasPopulateRelatSelects();
+  if(tab==='horario') renderHorario();
 }
 
 // ── Professor: Sessions ─────────────────────────────────────────────
@@ -6496,6 +6945,15 @@ function aulasCriarSessao(aberta){
 }
 
 function aulasCriarSessaoFechada(){ aulasCriarSessao(false); }
+
+async function aulasAutoPublishSession(){
+  try{
+    var url = getURL();
+    if(!url) return;
+    await publishConfig();
+    toast('📡 Sessão sincronizada com Sheets.','ok');
+  }catch(e){ /* silent fail — session still works locally */ }
+}
 
 function aulasToggleSessao(id){
   const cfg = loadAulasCfg();
