@@ -149,7 +149,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <button class="login-btn aluno" id="login-btn" onclick="doLogin()">🔑 Entrar como Aluno</button>
     <div class="login-err" id="login-err"></div>
     <div class="login-status" id="login-status"></div>
-    <a href="#" class="login-skip" onclick="event.preventDefault();showDirect()">Acesso direto (sem login centralizado) →</a>
   </div>
 </div>
 
@@ -166,21 +165,6 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
   <div class="nav-cards" id="nav-cards"></div>
 </div>
 
-<!-- ═══ DIRECT ACCESS (fallback) ═══ -->
-<div class="login-section" id="section-direct" style="display:none">
-  <div style="text-align:center;margin-bottom:12px">
-    <a href="#" onclick="event.preventDefault();hideDirect()" style="font-size:.78rem;color:var(--accent)">← Voltar ao login</a>
-  </div>
-  <div class="nav-cards">
-    <a class="nav-card prof" href="Nexus_ESECCinfaesCTE_Professor.html">
-      <div class="nc-icon">👨‍🏫</div><div class="nc-title">Professor</div><div class="nc-desc">Acesso direto sem login</div>
-    </a>
-    <a class="nav-card aluno" href="Nexus_ESECCinfaesCTE_Aluno.html">
-      <div class="nc-icon">🎓</div><div class="nc-title">Aluno</div><div class="nc-desc">Acesso direto sem login</div>
-    </a>
-  </div>
-</div>
-
 <!-- ═══ TOOLS ═══ -->
 <div class="tools-section">
   <a class="tool-card" href="Nexus_ESECCinfaesCTE_Perfboard.html">
@@ -188,6 +172,17 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
     <div class="tool-info">
       <div class="tool-title">Perfboard Designer</div>
       <div class="tool-desc">Projetar ligações em placas PCB e breadboards</div>
+    </div>
+  </a>
+</div>
+
+<!-- ═══ TOOLS: ESP32 ═══ -->
+<div class="tools-section" style="margin-top:10px">
+  <a class="tool-card" href="Nexus_ESECCinfaesCTE_ESP32_RFID.html" style="border-color:#7C3AED">
+    <div class="tool-icon">🔌</div>
+    <div class="tool-info">
+      <div class="tool-title">Terminal RFID ESP32</div>
+      <div class="tool-desc">Guia de montagem, firmware e configuração do terminal de presenças por cartão</div>
     </div>
   </a>
 </div>
@@ -234,7 +229,7 @@ var MESTRE_URL_KEY = 'nexus_mestre_url';
 // ── HARDCODE: after deploying the Mestre Apps Script, paste the URL here ──
 // Once set, no one needs to configure anything — just open index.html.
 // Leave empty ('') to use localStorage fallback.
-var HARDCODED_MESTRE_URL = 'https://script.google.com/macros/s/AKfycbyKY7oHWdkkkmrPElA9zXQRjF9NRGETWZioDt_pV0WkYi0jfjf2fva4Ta0fwEz26Nx4/exec';
+var HARDCODED_MESTRE_URL = '';
 // ── Security token — must match Code_Mestre.gs and Code.gs ──
 var API_TOKEN = 'nexus_eac_2026_token';
 var SESSION_KEY    = 'nexus_session';
@@ -313,8 +308,10 @@ async function doLogin(){
     if(res.ok){
       // Store session data for Aluno/Professor to pick up
       setSession(res);
-      // Also store sheetsUrl so Aluno.html auto-configures
+      // Store sheetsUrl + mestreUrl for Professor/Aluno to use
       if(res.sheetsUrl) localStorage.setItem('nexus_session_sheets_url', res.sheetsUrl);
+      var resolvedMestre = getMestreUrl();
+      if(resolvedMestre) localStorage.setItem('nexus_mestre_url', resolvedMestre);
       status.textContent = '✅ Bem-vindo, ' + res.nome + '!';
       setTimeout(function(){ showLoggedIn(res); }, 400);
     } else {
@@ -331,7 +328,6 @@ async function doLogin(){
 // ── Logged in ────────────────────────────────────────────────
 function showLoggedIn(s){
   document.getElementById('section-login').style.display = 'none';
-  document.getElementById('section-direct').style.display = 'none';
   document.getElementById('section-welcome').style.display = 'block';
   document.getElementById('config-section').style.display = 'none';
 
@@ -363,16 +359,6 @@ function doLogout(){
   document.getElementById('login-pwd').value = '';
   document.getElementById('login-err').textContent = '';
   document.getElementById('login-status').textContent = '';
-}
-
-// ── Direct access ────────────────────────────────────────────
-function showDirect(){
-  document.getElementById('section-login').style.display = 'none';
-  document.getElementById('section-direct').style.display = 'block';
-}
-function hideDirect(){
-  document.getElementById('section-direct').style.display = 'none';
-  document.getElementById('section-login').style.display = 'block';
 }
 
 // ── Mestre URL config ────────────────────────────────────────
