@@ -183,7 +183,7 @@ tr:hover{background:#EFF6FF}
 
 Fluxo:
 1. Aluno passa cartão → ESP32 lê UID (ex: A3B2C1D4)
-2. ESP32 → POST {action:"rfidPresenca", uid:"A3B2C1D4", token:"..."}
+2. ESP32 → POST {action:"rfidPresenca", uid:"...", mode:"aula", token:"..."}
 3. Mestre resolve UID → nome, turma, sheetsUrl
 4. Mestre → POST para Code.gs da turma → regista presença
 5. Mestre → responde ao ESP32: {ok:true, nome:"David Cardoso"}
@@ -376,7 +376,10 @@ const char* WIFI_SSID     = "NOME_DA_REDE";
 const char* WIFI_PASS     = "PASSWORD_WIFI";
 const char* MESTRE_URL    = "https://script.google.com/macros/s/AAAA.../exec";
 const char* API_TOKEN     = "nexus_eac_2026_token";
-const char* TERMINAL_NAME = "Lab Eletrónica";  // nome deste terminal
+const char* TERMINAL_ID   = "lab_ele";          // ID único desta estação
+const char* TERMINAL_NAME = "Lab Eletrónica";  // nome legível no OLED
+// Modo: "estagio" (presenças estágio) ou "aula" (presenças aulas — requer sessão aberta)
+const char* TERMINAL_MODE = "aula";
 
 // ── PINOS ────────────────────────────────────────────────────────
 #define RC522_SS   5
@@ -513,6 +516,7 @@ void handlePresenca(String uid) {
                 "\"uid\":\"" + uid + "\","
                 "\"tipo\":\"" + tipo + "\","
                 "\"terminal\":\"" + String(TERMINAL_NAME) + "\","
+                "\"mode\":\"" + String(TERMINAL_MODE) + "\","
                 "\"token\":\"" + String(API_TOKEN) + "\"}";
   
   // POST to Mestre
@@ -706,7 +710,9 @@ const char* WIFI_SSID     = "NomeDaRedeWiFi";      // rede WiFi da escola
 const char* WIFI_PASS     = "PasswordDoWiFi";       // password da rede
 const char* MESTRE_URL    = "https://script.google.com/macros/s/AKfyc.../exec";  // URL do Mestre
 const char* API_TOKEN     = "nexus_eac_2026_token";  // mesmo token do sistema
+const char* TERMINAL_ID   = "lab_ele";               // ID único
 const char* TERMINAL_NAME = "Lab Eletrónica";        // nome identificador
+const char* TERMINAL_MODE = "aula";                  // "aula" ou "estagio"
 </div>
 
 <div class="note warn">
@@ -805,6 +811,7 @@ const char* TERMINAL_NAME = "Estágio - Empresa X";
   "uid": "A3B2C1D4",
   "tipo": "entrada",        // "entrada" ou "saida"
   "terminal": "Lab Eletrónica",
+  "mode": "aula",
   "token": "nexus_eac_2026_token"
 }
 
