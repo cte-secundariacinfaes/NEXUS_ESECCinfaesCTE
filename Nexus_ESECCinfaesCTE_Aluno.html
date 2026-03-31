@@ -1011,6 +1011,17 @@ body[data-mode="student"] .turma-bar{display:none!important}
 
 
 
+
+<!-- ═══ TOMADA DE CONHECIMENTO ═══ -->
+<div id="view-conhecimento" class="view">
+  <div style="text-align:center;padding:24px 0 16px">
+    <div style="font-size:2.5rem;margin-bottom:6px">📋</div>
+    <h2 style="font-size:1.3rem;font-weight:800;color:var(--navy);margin-bottom:4px">Tomada de Conhecimento</h2>
+    <p style="font-size:.85rem;color:var(--muted);max-width:500px;margin:0 auto">Consulta os critérios de avaliação e planificações de cada UFCD. Confirma que tomaste conhecimento.</p>
+  </div>
+  <div id="tc-cards" style="max-width:700px;margin:0 auto"></div>
+</div>
+
 <!-- ═══ AUTOAVALIAÇÃO ═══ -->
 <div id="view-autoav" class="view">
 
@@ -4821,6 +4832,173 @@ async function setupConnect(){
 
 
 
+
+
+
+
+// ── TOMADA DE CONHECIMENTO ──────────────────────────────────────────
+var KEY_TC_DONE = 'nexus_tc_done';
+
+function loadTcDone(){
+  return ls(KEY_TC_DONE) || [];
+}
+function saveTcDone(list){
+  ls(KEY_TC_DONE, list);
+}
+
+function renderConhecimentoView(){
+  var list = loadAutoAvList();
+  // Filter: only UFCDs with estado 'conhecimento' or 'ambas'
+  var visible = list.filter(function(c){ return c.estado === 'conhecimento' || c.estado === 'ambas'; });
+  var el = document.getElementById('tc-cards');
+  if(!el) return;
+
+  if(!visible.length){
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--muted);font-size:.88rem">Não há UFCDs com tomada de conhecimento ativa.<br>O professor ainda não ativou esta fase.</div>';
+    return;
+  }
+
+  var done = loadTcDone();
+  var sess = getNexusSession();
+  var nomeAluno = sess ? sess.nome : '';
+
+  el.innerHTML = visible.map(function(cfg){
+    var key = (nomeAluno||'')+'|'+(cfg.ufcd||cfg.disciplina||cfg.id);
+    var isDone = done.indexOf(key) >= 0;
+    var links = (cfg.links||[]).filter(function(l){ return l.url; });
+
+    return '<div class="card" style="margin-bottom:14px;border-left:4px solid '+(isDone?'var(--green)':'var(--gold)')+'">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<div>'+
+          '<div style="font-size:1rem;font-weight:800;color:var(--navy)">'+escHtml(cfg.disciplina||'')+(cfg.ufcd?' — <span style="color:var(--accent)">UFCD '+escHtml(cfg.ufcd)+'</span>':'')+'</div>'+
+          '<div style="font-size:.75rem;color:var(--muted)">'+escHtml([cfg.ano,cfg.anoLetivo].filter(Boolean).join(' · ')||'')+'</div>'+
+        '</div>'+
+        (isDone ? '<span style="background:#F0FDF4;color:#065F46;padding:3px 10px;border-radius:6px;font-size:.75rem;font-weight:700">✅ Assinado</span>' :
+                  '<span style="background:#FEF3C7;color:#92400E;padding:3px 10px;border-radius:6px;font-size:.75rem;font-weight:700">📋 Pendente</span>')+
+      '</div>'+
+      // Links
+      (links.length ? '<div style="margin-bottom:10px">'+
+        '<div style="font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:4px">📎 Documentos:</div>'+
+        links.map(function(lk){
+          return '<a href="'+escHtml(lk.url)+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;margin:2px 4px 2px 0;background:#EFF6FF;border:1px solid #93C5FD;border-radius:6px;font-size:.78rem;color:#1E40AF;text-decoration:none;font-weight:600">📄 '+escHtml(lk.label||'Documento')+'</a>';
+        }).join('')+
+        '</div>' : '')+
+      // Critérios de avaliação
+      '<details style="margin-bottom:10px">'+
+        '<summary style="font-size:.82rem;font-weight:700;color:var(--navy);cursor:pointer;padding:4px 0">▶ Critérios de Avaliação</summary>'+
+        '<div style="margin-top:8px;font-size:.8rem">'+
+          (cfg.vetores||[]).map(function(v){
+            return '<div style="background:#F8FAFC;border-radius:8px;padding:8px 12px;margin-bottom:6px">'+
+              '<div style="font-weight:700;color:var(--navy)">'+escHtml(v.nome)+' <span style="color:var(--accent);font-size:.75rem">('+v.peso+'%)</span></div>'+
+              '<div style="font-size:.75rem;color:var(--muted);margin-top:2px">'+
+                (v.caracteristicas||[]).map(function(c,i){ return (i+1)+'. '+escHtml(c); }).join(' · ')+
+              '</div>'+
+            '</div>';
+          }).join('')+
+        '</div>'+
+      '</details>'+
+      // Sign button
+      (!isDone ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
+        '<label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer">'+
+          '<input type="checkbox" data-tcid="'+escHtml(cfg.id||'')+'" class="tc-checkbox" style="width:16px;height:16px">'+
+          '<span>Li e tomei conhecimento dos critérios de avaliação e planificações desta UFCD</span>'+
+        '</label>'+
+        '<button class="btn btn-primary btn-sm" data-tcid="'+escHtml(cfg.id||'')+'" data-tckey="'+escHtml(cfg.ufcd||cfg.disciplina||'')+'" onclick="tcSign(this.dataset.tcid,this.dataset.tckey)">✅ Assinar</button>'+
+      '</div>' : '')+
+    '</div>';
+  }).join('');
+}
+
+async function tcSign(cfgId, ufcdKey){
+  var cb = document.querySelector('.tc-checkbox[data-tcid="'+cfgId+'"]');
+  if(!cb || !cb.checked){
+    toast('⚠️ Marca a checkbox para confirmar que leste os critérios.','warn');
+    return;
+  }
+  var sess = getNexusSession();
+  var nome = sess ? sess.nome : _avNome || '';
+  var nAluno = sess ? sess.id : '';
+
+  if(!nome){
+    toast('⚠️ Faz login primeiro para assinar.','warn');
+    return;
+  }
+
+  // Find the config
+  var list = loadAutoAvList();
+  var cfg = list.find(function(c){ return c.id === cfgId; });
+
+  // Save locally
+  var done = loadTcDone();
+  var key = nome+'|'+ufcdKey;
+  if(done.indexOf(key) < 0) done.push(key);
+  saveTcDone(done);
+
+  // Submit to Sheets
+  if(getURL()){
+    try{
+      await postToSheet({
+        action: 'tomaConhecimento',
+        nome: nome,
+        nAluno: nAluno,
+        disciplina: cfg ? cfg.disciplina : '',
+        ufcd: cfg ? (cfg.ufcd||'') : '',
+        ano: cfg ? (cfg.ano||'') : '',
+        anoLetivo: cfg ? (cfg.anoLetivo||'') : '',
+        docs: (cfg && cfg.links) ? cfg.links.map(function(l){return l.label;}).join(', ') : ''
+      });
+    }catch(e){}
+  }
+
+  toast('✅ Tomada de conhecimento assinada!','ok');
+  renderConhecimentoView();
+}
+
+// ── AUTOAV CONFIG: Links management ─────────────────────────────────
+function avcfgRenderLinks(links){
+  var el = document.getElementById('avcfg-links');
+  if(!el) return;
+  var arr = links || [];
+  if(!arr.length){
+    el.innerHTML = '<div style="font-size:.78rem;color:var(--muted)">Sem documentos. Clica "＋ Adicionar Link" para adicionar planificações.</div>';
+    return;
+  }
+  el.innerHTML = arr.map(function(lk,i){
+    return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">' +
+      '<input type="text" id="avcfg-link-label-'+i+'" value="'+escHtml(lk.label||'')+'" placeholder="ex: Planificação Anual" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.8rem">' +
+      '<input type="url" id="avcfg-link-url-'+i+'" value="'+escHtml(lk.url||'')+'" placeholder="https://drive.google.com/..." style="flex:2;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.8rem">' +
+      '<button type="button" onclick="avcfgRemoveLink('+i+')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:.9rem" title="Remover">✕</button>' +
+      '</div>';
+  }).join('');
+}
+
+function avcfgAddLink(){
+  var links = avcfgReadLinks();
+  links.push({label:'', url:''});
+  avcfgRenderLinks(links);
+  var idx = links.length - 1;
+  var el = document.getElementById('avcfg-link-label-'+idx);
+  if(el) el.focus();
+}
+
+function avcfgRemoveLink(idx){
+  var links = avcfgReadLinks();
+  links.splice(idx, 1);
+  avcfgRenderLinks(links);
+}
+
+function avcfgReadLinks(){
+  var links = [];
+  for(var i = 0; i < 20; i++){
+    var lbl = document.getElementById('avcfg-link-label-'+i);
+    var url = document.getElementById('avcfg-link-url-'+i);
+    if(!lbl || !url) break;
+    var l = lbl.value.trim(), u = url.value.trim();
+    if(l || u) links.push({label:l||'Documento', url:u});
+  }
+  return links;
+}
+
 // ── GESTÃO UTILIZADORES (MESTRE) ────────────────────────────────────
 var _mestreUsers = [];
 
@@ -5476,7 +5654,7 @@ function renderAutoAvDiscList(){
     const vNomes = (cfg.vetores||[]).map(v=>v.nome+' ('+v.peso+'%)').join(', ');
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${i%2===0?'#F8FAFC':'#fff'};border-radius:8px;margin-bottom:4px">
       <div style="flex:1;min-width:0">
-        <div style="font-weight:700;color:var(--primary);font-size:.88rem">${cfg.disciplina||'Sem nome'}</div>
+        <div style="font-weight:700;color:var(--primary);font-size:.88rem">${cfg.disciplina||'Sem nome'}${cfg.ufcd?' <span style="font-size:.75rem;color:var(--accent);font-weight:600">UFCD '+cfg.ufcd+'</span>':''} ${cfg.estado==='conhecimento'?'<span style="font-size:.68rem;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px">📋 Conhecimento</span>':cfg.estado==='autoav'?'<span style="font-size:.68rem;background:#F0FDF4;color:#065F46;padding:1px 6px;border-radius:4px">✍️ Autoav</span>':cfg.estado==='ambas'?'<span style="font-size:.68rem;background:#EFF6FF;color:#1E40AF;padding:1px 6px;border-radius:4px">📋+✍️ Ambas</span>':'<span style="font-size:.68rem;background:#F1F5F9;color:var(--muted);padding:1px 6px;border-radius:4px">🔴 Inativa</span>'}</div>
         <div style="font-size:.72rem;color:var(--muted)">${[cfg.ano,cfg.anoLetivo].filter(Boolean).join(' · ')} · ${nV} vetores: ${vNomes}</div>
       </div>
       <button class="btn btn-outline btn-sm" style="font-size:.7rem" onclick="loadAutoAvFromList('${cfg.id}')" title="Editar">✏️</button>
@@ -5579,13 +5757,15 @@ function renderAutoAvView(){
 function renderAutoAvDiscCards(list){
   const done = (ls(KEY_AUTOAV_DONE+'_done')||[]);
   const cards = document.getElementById('autoav-disc-cards');
-  cards.innerHTML = list.map(cfg=>{
+  // Filter: only show UFCDs with autoav or ambas estado (or no estado for backward compat)
+  var filteredList = list.filter(function(c){ var e=c.estado||'autoav'; return e==='autoav'||e==='ambas'; });
+  cards.innerHTML = filteredList.map(cfg=>{
     const nVetores = (cfg.vetores||[]).length;
     const vetNomes = (cfg.vetores||[]).map(v=>v.nome).join(', ');
     const isDone = done.some(function(d){ return d && d.includes && d.includes(cfg.disciplina); });
     return `<div class="autoav-disc-card ${isDone?'done':''}" onclick="selectAutoAvDisc('${cfg.id||''}')">
       <div class="adc-icon">✍️</div>
-      <div class="adc-name">${cfg.disciplina||'Autoavaliação'}</div>
+      <div class="adc-name">${cfg.disciplina||'Autoavaliação'}${cfg.ufcd?' — UFCD '+cfg.ufcd:''}</div>
       <div class="adc-meta">${[cfg.ano,cfg.anoLetivo].filter(Boolean).join(' · ')||'—'}</div>
       <div class="adc-vetores">${nVetores} vetores · ${vetNomes}</div>
     </div>`;
@@ -5605,7 +5785,7 @@ function selectAutoAvDisc(id){
 async function showAutoAvSingleView(cfg){
   document.getElementById('autoav-hero-student').style.display='block';
   document.getElementById('autoav-name-card').style.display='block';
-  document.getElementById('aah-disciplina').textContent = cfg.disciplina || 'Autoavaliação';
+  document.getElementById('aah-disciplina').textContent = (cfg.disciplina||'Autoavaliação') + (cfg.ufcd ? ' — UFCD '+cfg.ufcd : '');
   document.getElementById('aah-desc').textContent = 'Avalia o teu desempenho de forma honesta e reflexiva.';
   document.getElementById('aah-turma').textContent = cfg.ano ? '🏫 ' + cfg.ano : '—';
   document.getElementById('aah-anoletivo').textContent = cfg.anoLetivo ? '🗓️ ' + cfg.anoLetivo : '—';
@@ -5787,6 +5967,7 @@ async function submitAutoAv(){
   const record = {
     nome: _avNome,
     disciplina: cfg.disciplina,
+    ufcd: cfg.ufcd||'',
     ano: cfg.ano,
     anoLetivo: cfg.anoLetivo,
     data: cfg.data || '',
@@ -5799,7 +5980,7 @@ async function submitAutoAv(){
 
   try {
     // sheetName derived from disciplina — Apps Script creates tab if needed
-    const sheetName = disciplinaToSheetName(cfg.disciplina);
+    const sheetName = cfg.ufcd ? 'AA_UFCD'+cfg.ufcd : disciplinaToSheetName(cfg.disciplina);
     const res = await postToSheet({action:'autoavSubmit', record, cfg, sheetName});
     if(res&&res.ok){
       // Mark as done per discipline
@@ -5879,12 +6060,20 @@ function autoavOutraDisciplina(){
 function renderAutoAvCfg(){
   const cfg = loadAutoAvCfg();
   const el  = document.getElementById('autoav-cfg-content');
+  // Render links after form is built
+  setTimeout(function(){ avcfgRenderLinks(cfg.links||[]); }, 50);
+
   el.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="session-field">
         <label>Disciplina</label>
         <input type="text" id="avcfg-disciplina" value="${cfg.disciplina||''}"
-               placeholder="ex: Física, EAC, Matemática">
+               placeholder="ex: Eletricidade e Eletrónica">
+      </div>
+      <div class="session-field">
+        <label>Nº UFCD</label>
+        <input type="text" id="avcfg-ufcd" value="${cfg.ufcd||''}"
+               placeholder="ex: 6016">
       </div>
       <div class="session-field">
         <label>Ano Letivo</label>
@@ -5900,6 +6089,25 @@ function renderAutoAvCfg(){
         <label>Data da Avaliação</label>
         <input type="date" id="avcfg-data" value="${cfg.data||''}">
       </div>
+      <div class="session-field">
+        <label>Estado</label>
+        <select id="avcfg-estado" style="padding:8px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.85rem">
+          <option value="inativa" ${(cfg.estado||'inativa')==='inativa'?'selected':''}>🔴 Inativa</option>
+          <option value="conhecimento" ${cfg.estado==='conhecimento'?'selected':''}>📋 Tomada de Conhecimento</option>
+          <option value="autoav" ${cfg.estado==='autoav'?'selected':''}>✍️ Autoavaliação</option>
+          <option value="ambas" ${cfg.estado==='ambas'?'selected':''}>📋+✍️ Ambas</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Links (planificações, documentos) -->
+    <div style="margin-bottom:16px">
+      <div style="font-weight:700;color:var(--navy);margin-bottom:6px;font-size:.88rem">
+        📎 Documentos e Planificações
+        <span style="font-size:.72rem;font-weight:400;color:var(--muted);margin-left:6px">Links para Google Drive ou outros (visíveis pelos alunos)</span>
+      </div>
+      <div id="avcfg-links"></div>
+      <button type="button" class="btn btn-outline btn-sm" onclick="avcfgAddLink()" style="margin-top:6px">＋ Adicionar Link</button>
     </div>
 
     <div style="font-weight:700;color:var(--navy);margin-bottom:10px">
@@ -6002,6 +6210,9 @@ function updateWeightBar(){
 function readAutoAvForm(){
   var cfg = {
     disciplina: document.getElementById('avcfg-disciplina')?.value.trim()||'',
+    ufcd: document.getElementById('avcfg-ufcd')?.value.trim()||'',
+    estado: document.getElementById('avcfg-estado')?.value||'inativa',
+    links: avcfgReadLinks(),
     ano:        document.getElementById('avcfg-ano')?.value.trim()||'',
     anoLetivo:  document.getElementById('avcfg-anoletivo')?.value.trim()||'',
     data:       document.getElementById('avcfg-data')?.value||'',
