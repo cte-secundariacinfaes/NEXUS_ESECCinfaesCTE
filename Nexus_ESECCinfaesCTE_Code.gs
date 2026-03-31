@@ -144,6 +144,8 @@ function doPost(e) {
       case "presencafeedback": result = handlePresencaFeedback(ss, payload); break;
       case "saveconfig":       result = handleSaveConfig(ss, payload);       break;
       case "getconfig":        result = handleGetConfig(ss);                 break;
+      case "rfidaularegisto": result = handleRfidAulaRegisto(ss, payload);  break;
+      case "tomaconhecimento": result = handleTomaConhecimento(ss, payload);  break;
       default:               result = {ok:false, msg:"Ação desconhecida: "+action};
     }
     appendLog(logSh, action, result.msg||"ok", JSON.stringify(payload).substring(0,200));
@@ -433,14 +435,16 @@ function handleAutoAvSubmit(ss, d) {
   const vetores = record.vetores || [];
 
   // Determine destination sheet
-  const sheetName = disciplinaToSheetName(record.disciplina || cfg.disciplina || "");
+  // Use UFCD number for sheet name if available
+  var ufcd = record.ufcd || cfg.ufcd || "";
+  const sheetName = ufcd ? AA_PREFIX + "UFCD" + ufcd : disciplinaToSheetName(record.disciplina || cfg.disciplina || "");
 
   // Build headers
   const vetorHeaders = vetores.map(v => v.nome + " /20");
   const vetorContrib = vetores.map(v => v.nome + " contrib.");
   const pesos        = vetores.map(v => v.nome + " peso%");
   const hdrs = [
-    "Timestamp","Nome","Disciplina","Ano/Turma","Ano Letivo","Data Avaliação",
+    "Timestamp","Nome","Disciplina","Nº UFCD","Ano/Turma","Ano Letivo","Data Avaliação",
     ...vetorHeaders,
     ...vetorContrib,
     "Nota Final /20",
@@ -1015,3 +1019,112 @@ function jsonResp(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// RFID AULA REGISTO — auto-detects active session
+// ─────────────────────────────────────────────────────────────────────
+function handleRfidAulaRegisto(ss, d) {
+  // Try to find the active session from published config
+  var configSh = ss.getSheetByName("Configuração");
+  var sessaoId = "", disciplina = "", modulo = "", horaInicio = "", data = "", sumario = "";
+
+  if (configSh && configSh.getLastRow() >= 4) {
+    try {
+      var cfgRaw = configSh.getRange(4, 1).getValue();
+      if (cfgRaw) {
+        var cfg = JSON.parse(cfgRaw);
+        if (cfg.aulas && cfg.aulas.sessoes) {
+          // Find the open session
+          var active = null;
+          for (var i = 0; i < cfg.aulas.sessoes.length; i++) {
+            if (cfg.aulas.sessoes[i].aberta) {
+              active = cfg.aulas.sessoes[i];
+              break;
+            }
+          }
+          if (active) {
+            sessaoId   = active.id || "";
+            disciplina = active.disciplina || "";
+            modulo     = active.modulo || "";
+            horaInicio = active.horaInicio || "";
+            data       = active.data || "";
+            sumario    = active.sumario || "";
+          }
+        }
+      }
+    } catch(e) {
+      // Config parse error — continue with empty fields
+    }
+  }
+
+  if (!sessaoId) {
+    return {ok: false, msg: "Sem sessão de aula aberta."};
+  }
+
+  // Calculate time and punctuality
+  var now = new Date();
+  var horaMarcacao = Utilities.formatDate(now, "Europe/Lisbon", "HH:mm:ss");
+  var atraso = 0;
+  var estado = "presente";
+
+  if (horaInicio) {
+    var parts = horaInicio.split(":");
+    var inicioMin = Number(parts[0]) * 60 + Number(parts[1] || 0);
+    var agoraMin = now.getHours() * 60 + now.getMinutes();
+    atraso = Math.max(0, agoraMin - inicioMin);
+    if (atraso > 15) estado = "falta";
+    else if (atraso > 10) estado = "pontualidade";
+  }
+
+  // Use the standard aula handler
+  var aulaPayload = {
+    sessaoId:     sessaoId,
+    disciplina:   disciplina,
+    modulo:       modulo,
+    data:         data || Utilities.formatDate(now, "Europe/Lisbon", "yyyy-MM-dd"),
+    horaInicio:   horaInicio,
+    alunoId:      d.alunoId || "rfid_" + (d.uid || ""),
+    alunoNome:    d.alunoNome || "",
+    horaMarcacao: horaMarcacao,
+    atraso:       atraso,
+    estado:       estado,
+    sumario:      sumario,
+    nAluno:       d.nAluno || "",
+    token:        d.token || ""
+  };
+
+  var result = handleAulaRegisto(ss, aulaPayload);
+  result.sessao = disciplina + (modulo ? " — " + modulo : "");
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// TOMADA DE CONHECIMENTO
+// ─────────────────────────────────────────────────────────────────────
+function handleTomaConhecimento(ss, d) {
+  var shName = "Tomada Conhecimento";
+  var hdrs = ["Timestamp","Nome","Nº Aluno","Disciplina","Nº UFCD","Ano/Turma",
+              "Ano Letivo","Docs Consultados","Assinatura"];
+  var sh = getOrCreate(ss, shName, hdrs, "#92400E");
+
+  var ts = timestamp();
+  sh.appendRow([
+    ts,
+    d.nome || "",
+    d.nAluno || "",
+    d.disciplina || "",
+    d.ufcd || "",
+    d.ano || "",
+    d.anoLetivo || "",
+    d.docs || "",
+    "Sim"
+  ]);
+
+  var lastRow = sh.getLastRow();
+  var bg = lastRow % 2 === 0 ? "#FFFBEB" : "#FFFFFF";
+  sh.getRange(lastRow, 1, 1, hdrs.length).setBackground(bg);
+  sh.getRange(lastRow, hdrs.length).setFontColor("#065F46").setFontWeight("bold");
+
+  return {ok: true, msg: d.nome + " assinou — " + (d.disciplina||"") + " UFCD " + (d.ufcd||"")};
+}
+
