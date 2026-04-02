@@ -149,6 +149,12 @@ const TOOLS = [{
   icon: "⌫",
   desc: "Apagar furos/comp.",
   clicks: 1
+}, {
+  id: "rail",
+  label: "Barramento",
+  icon: "▬",
+  desc: "Linha/coluna VCC/GND",
+  clicks: 2
 }];
 
 // ─── Preset Library ───
@@ -813,6 +819,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
   const [headerDir, setHeaderDir] = useState("h");
   const [labelText, setLabelText] = useState("R1");
   const [selectedLibComp, setSelectedLibComp] = useState(null);
+  const [railMode, setRailMode] = useState("row"); // "row" or "col"
 
   // View
   const [dualView, setDualView] = useState(false);
@@ -1152,6 +1159,119 @@ const PerfboardDesigner = function PerfboardDesigner() {
           delete nh[hk(h.r, h.c)];
           return nh;
         });
+      }
+      return;
+    }
+    if (tool === "rail") {
+      if (!wireStart) {
+        setWireStart(h);
+      } else {
+        if (wireStart.r === h.r && wireStart.c === h.c) {
+          setWireStart(null);
+          return;
+        }
+        pushHistory();
+        const sameRow = wireStart.r === h.r;
+        const sameCol = wireStart.c === h.c;
+        const useRow = railMode === "row" ? true : railMode === "col" ? false : sameRow;
+        if (useRow || sameRow) {
+          // Horizontal rail
+          const r = wireStart.r;
+          const cMin = Math.min(wireStart.c, h.c),
+            cMax = Math.max(wireStart.c, h.c);
+          const newComps = [];
+          for (let c = cMin; c < cMax; c++) newComps.push({
+            type: "wire",
+            from: {
+              r,
+              c
+            },
+            to: {
+              r,
+              c: c + 1
+            },
+            color,
+            label: ""
+          });
+          setComponents(cs => [...cs, ...newComps]);
+          setHoleColors(hc => {
+            const nh = {
+              ...hc
+            };
+            for (let c = cMin; c <= cMax; c++) nh[hk(r, c)] = color;
+            return nh;
+          });
+        } else if (sameCol) {
+          // Vertical rail
+          const c = wireStart.c;
+          const rMin = Math.min(wireStart.r, h.r),
+            rMax = Math.max(wireStart.r, h.r);
+          const newComps = [];
+          for (let r = rMin; r < rMax; r++) newComps.push({
+            type: "wire",
+            from: {
+              r,
+              c
+            },
+            to: {
+              r: r + 1,
+              c
+            },
+            color,
+            label: ""
+          });
+          setComponents(cs => [...cs, ...newComps]);
+          setHoleColors(hc => {
+            const nh = {
+              ...hc
+            };
+            for (let r = rMin; r <= rMax; r++) nh[hk(r, c)] = color;
+            return nh;
+          });
+        } else {
+          // L-shape: horizontal on start row, then vertical to end
+          const newComps = [];
+          const cMin = Math.min(wireStart.c, h.c),
+            cMax = Math.max(wireStart.c, h.c);
+          for (let c = cMin; c < cMax; c++) newComps.push({
+            type: "wire",
+            from: {
+              r: wireStart.r,
+              c
+            },
+            to: {
+              r: wireStart.r,
+              c: c + 1
+            },
+            color,
+            label: ""
+          });
+          const rMin = Math.min(wireStart.r, h.r),
+            rMax = Math.max(wireStart.r, h.r);
+          for (let r = rMin; r < rMax; r++) newComps.push({
+            type: "wire",
+            from: {
+              r,
+              c: h.c
+            },
+            to: {
+              r: r + 1,
+              c: h.c
+            },
+            color,
+            label: ""
+          });
+          setComponents(cs => [...cs, ...newComps]);
+          setHoleColors(hc => {
+            const nh = {
+              ...hc
+            };
+            for (let c = cMin; c <= cMax; c++) nh[hk(wireStart.r, c)] = color;
+            for (let r = rMin; r <= rMax; r++) nh[hk(r, h.c)] = color;
+            return nh;
+          });
+        }
+        setWireStart(null);
       }
       return;
     }
@@ -2037,6 +2157,61 @@ const PerfboardDesigner = function PerfboardDesigner() {
         strokeDasharray: "4,3"
       });
     }
+    if (tool === "rail") {
+      // Show dots along the rail path
+      const dots = [];
+      const sameRow = wireStart.r === hoverHole.r,
+        sameCol = wireStart.c === hoverHole.c;
+      const useRow = railMode === "row" ? true : railMode === "col" ? false : sameRow || !sameCol;
+      if (useRow || sameRow) {
+        const r = wireStart.r,
+          cMin = Math.min(wireStart.c, hoverHole.c),
+          cMax = Math.max(wireStart.c, hoverHole.c);
+        for (let c = cMin; c <= cMax; c++) {
+          const {
+            x,
+            y
+          } = hp(r, c);
+          dots.push(/*#__PURE__*/React.createElement("circle", {
+            key: `r${c}`,
+            cx: x,
+            cy: y,
+            r: PR,
+            fill: color,
+            opacity: 0.3
+          }));
+        }
+      }
+      if ((sameCol || !useRow) && !sameRow) {
+        const c = sameCol ? wireStart.c : hoverHole.c,
+          rMin = Math.min(wireStart.r, hoverHole.r),
+          rMax = Math.max(wireStart.r, hoverHole.r);
+        for (let r = rMin; r <= rMax; r++) {
+          const {
+            x,
+            y
+          } = hp(r, c);
+          dots.push(/*#__PURE__*/React.createElement("circle", {
+            key: `c${r}`,
+            cx: x,
+            cy: y,
+            r: PR,
+            fill: color,
+            opacity: 0.3
+          }));
+        }
+      }
+      return /*#__PURE__*/React.createElement("g", null, dots, /*#__PURE__*/React.createElement("line", {
+        x1: f.x,
+        y1: f.y,
+        x2: t.x,
+        y2: t.y,
+        stroke: color,
+        strokeWidth: 1.5,
+        opacity: 0.3,
+        strokeDasharray: "2,2"
+      }));
+    }
     return /*#__PURE__*/React.createElement("line", {
       x1: f.x,
       y1: f.y,
@@ -2439,7 +2614,82 @@ const PerfboardDesigner = function PerfboardDesigner() {
     value: labelText,
     onChange: e => setLabelText(e.target.value),
     style: inputS
-  })), /*#__PURE__*/React.createElement("div", {
+  })), tool === "rail" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "BARRAMENTO"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b",
+      marginBottom: 4
+    }
+  }, "Clique in\xEDcio \u2192 clique fim"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 3,
+      marginBottom: 4
+    }
+  }, [{
+    l: "Linha →",
+    v: "row"
+  }, {
+    l: "Coluna ↓",
+    v: "col"
+  }, {
+    l: "Auto",
+    v: "auto"
+  }].map(m => /*#__PURE__*/React.createElement("button", {
+    key: m.v,
+    onClick: () => setRailMode(m.v),
+    style: {
+      ...btn(railMode === m.v, railMode === m.v ? "#22c55e" : "#94a3b8"),
+      width: "auto",
+      padding: "3px 6px",
+      fontSize: 8
+    }
+  }, m.l))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b",
+      marginBottom: 3
+    }
+  }, "Atalhos r\xE1pidos:"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 3
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setColor("#e74c3c"),
+    style: {
+      ...btn(color === "#e74c3c", "#e74c3c"),
+      width: "auto",
+      padding: "3px 8px",
+      fontSize: 9,
+      fontWeight: 700
+    }
+  }, "VCC"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setColor("#3498db"),
+    style: {
+      ...btn(color === "#3498db", "#3498db"),
+      width: "auto",
+      padding: "3px 8px",
+      fontSize: 9,
+      fontWeight: 700
+    }
+  }, "GND"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setColor("#2ecc71"),
+    style: {
+      ...btn(color === "#2ecc71", "#2ecc71"),
+      width: "auto",
+      padding: "3px 8px",
+      fontSize: 9,
+      fontWeight: 700
+    }
+  }, "SIG"))), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid #1e293b",
       margin: "3px 0",
