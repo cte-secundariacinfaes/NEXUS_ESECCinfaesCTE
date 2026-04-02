@@ -637,7 +637,7 @@ function generatePrintHTML(name, board, components, holeColors, customLib) {
     const {
       y
     } = hp(r, 0);
-    labels += `<text x="7" y="${y + 3}" text-anchor="middle" font-size="7" fill="#666" font-family="monospace">${String.fromCharCode(65 + r)}</text>`;
+    labels += `<text x="7" y="${y + 3}" text-anchor="middle" font-size="7" fill="#666" font-family="monospace">${coord(r, 0).replace(/\d+$/, '')}</text>`;
   }
   components.forEach(comp => {
     if (comp.type === "wire" || comp.type === "jumper") {
@@ -678,6 +678,11 @@ function generatePrintHTML(name, board, components, holeColors, customLib) {
       const w = (comp.w - 1) * HS,
         h = (comp.h - 1) * HS;
       comps += `<rect x="${ox - 5}" y="${oy - 5}" width="${w + 10}" height="${h + 10}" rx="2" fill="#e8e8e8" stroke="#333" stroke-width="1.2"/>`;
+      comps += `<circle cx="${ox + 3}" cy="${oy + 3}" r="2" fill="none" stroke="#666" stroke-width="0.6"/>`;
+      for (let pi = 0; pi < comp.w; pi++) {
+        const px = ox + pi * HS;
+        comps += `<circle cx="${px}" cy="${oy}" r="2" fill="#555"/><circle cx="${px}" cy="${oy + h}" r="2" fill="#555"/>`;
+      }
       comps += `<text x="${ox + w / 2}" y="${oy + h / 2 + 3}" text-anchor="middle" font-size="9" fill="#333" font-family="monospace" font-weight="bold">${comp.label || "IC"}</text>`;
     } else if (comp.type === "header") {
       for (let i = 0; i < comp.len; i++) {
@@ -819,7 +824,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
   const [headerDir, setHeaderDir] = useState("h");
   const [labelText, setLabelText] = useState("R1");
   const [selectedLibComp, setSelectedLibComp] = useState(null);
-  const [railMode, setRailMode] = useState("row"); // "row" or "col"
+  const [railMode, setRailMode] = useState("auto"); // "row", "col", or "auto"
 
   // View
   const [dualView, setDualView] = useState(false);
@@ -831,8 +836,11 @@ const PerfboardDesigner = function PerfboardDesigner() {
 
   // Editing
   const [history, setHistory] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
   const [selectedComp, setSelectedComp] = useState(null);
   const [dragging, setDragging] = useState(null);
+  const [eraserDragging, setEraserDragging] = useState(false);
+  const pinchRef = useRef(null);
   const [editingLabel, setEditingLabel] = useState(null);
   const [editText, setEditText] = useState("");
 
@@ -861,6 +869,14 @@ const PerfboardDesigner = function PerfboardDesigner() {
   const bgInputRef = useRef(null);
   const editInputRef = useRef(null);
   const canvasRef = useRef(null);
+  const closeAllModals = () => {
+    setShowSaveModal(false);
+    setShowLoadModal(false);
+    setShowLibrary(false);
+    setShowCreator(false);
+    setShowBoardCreator(false);
+    setConfirmDelete(null);
+  };
   const svgW = BP * 2 + (board.cols - 1) * HS;
   const svgH = BP * 2 + (board.rows - 1) * HS;
 
@@ -913,7 +929,11 @@ const PerfboardDesigner = function PerfboardDesigner() {
   };
   const deleteCustomBoard = async id => {
     await saveCustomBoards(customBoards.filter(b => b.id !== id));
-    if (boardIdx >= ALL_BOARDS.length) setBoardIdx(3);
+    if (boardIdx >= ALL_BOARDS.length) {
+      setBoardIdx(3);
+      setComponents([]);
+      setHoleColors({});
+    }
   };
 
   // ─── Fit to screen ───
@@ -941,6 +961,33 @@ const PerfboardDesigner = function PerfboardDesigner() {
       window.removeEventListener("resize", handleResize);
     };
   }, [fitToScreen, boardIdx]);
+
+  // ─── Auto-save every 60s ───
+  const lastSaveRef = useRef(JSON.stringify({
+    components,
+    holeColors
+  }));
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      const current = JSON.stringify({
+        components,
+        holeColors
+      });
+      if (current !== lastSaveRef.current && components.length > 0) {
+        const k = "perfboard:__autosave__";
+        await store.set(k, JSON.stringify({
+          projectName: "(auto) " + projectName,
+          boardIdx,
+          components,
+          holeColors,
+          customBoards,
+          savedAt: new Date().toISOString()
+        }));
+        lastSaveRef.current = current;
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [components, holeColors, projectName, boardIdx, customBoards]);
 
   // ─── Net detection (memoized) ───
   const {
@@ -972,15 +1019,36 @@ const PerfboardDesigner = function PerfboardDesigner() {
         ...holeColors
       }
     }]);
+    setRedoStack([]);
   }, [components, holeColors]);
   const undo = useCallback(() => {
     if (!history.length) return;
+    setRedoStack(rs => [...rs.slice(-20), {
+      components: JSON.parse(JSON.stringify(components)),
+      holeColors: {
+        ...holeColors
+      }
+    }]);
     const prev = history[history.length - 1];
     setComponents(prev.components);
     setHoleColors(prev.holeColors);
     setHistory(h => h.slice(0, -1));
     setSelectedComp(null);
-  }, [history]);
+  }, [history, components, holeColors]);
+  const redo = useCallback(() => {
+    if (!redoStack.length) return;
+    setHistory(h => [...h, {
+      components: JSON.parse(JSON.stringify(components)),
+      holeColors: {
+        ...holeColors
+      }
+    }]);
+    const next = redoStack[redoStack.length - 1];
+    setComponents(next.components);
+    setHoleColors(next.holeColors);
+    setRedoStack(rs => rs.slice(0, -1));
+    setSelectedComp(null);
+  }, [redoStack, components, holeColors]);
 
   // ─── Save / Load ───
   const saveToStorage = async n => {
@@ -991,6 +1059,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
       boardIdx,
       components,
       holeColors,
+      customBoards,
       savedAt: new Date().toISOString()
     }));
     setSaveStatus(ok ? "saved" : "error");
@@ -1024,6 +1093,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
     const v = await store.get(key);
     if (v) {
       const d = JSON.parse(v);
+      if (d.customBoards?.length) saveCustomBoards(d.customBoards);
       setBoardIdx(d.boardIdx ?? 3);
       setComponents(d.components || []);
       setHoleColors(d.holeColors || {});
@@ -1039,20 +1109,23 @@ const PerfboardDesigner = function PerfboardDesigner() {
   const exportFile = () => {
     const blob = new Blob([JSON.stringify({
       _format: "perfboard-designer",
-      _version: 2,
+      _version: 3,
       projectName,
       boardIdx,
       components,
       holeColors,
       customLibrary,
+      customBoards,
       savedAt: new Date().toISOString()
     }, null, 2)], {
       type: "application/json"
     });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `${projectName.replace(/\s/g, "_")}.perfboard.json`;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
     setSaveStatus("saved");
     setTimeout(() => setSaveStatus(null), 1500);
   };
@@ -1069,7 +1142,10 @@ const PerfboardDesigner = function PerfboardDesigner() {
           setHoleColors(d.holeColors || {});
           setProjectName(d.projectName || file.name.replace(/\..*$/, ""));
           if (d.customLibrary?.length) {
-            saveCustomLib([...customLibrary, ...d.customLibrary.filter(c => !customLibrary.find(e => e.id === c.id))]);
+            saveCustomLib([...customLibrary, ...d.customLibrary.filter(cl => !customLibrary.find(el => el.id === cl.id))]);
+          }
+          if (d.customBoards?.length) {
+            saveCustomBoards([...customBoards, ...d.customBoards.filter(cb => !customBoards.find(eb => eb.id === cb.id))]);
           }
           setHistory([]);
           setSelectedComp(null);
@@ -1110,8 +1186,9 @@ const PerfboardDesigner = function PerfboardDesigner() {
     const svg = svgRef.current;
     if (!svg) return null;
     const rect = svg.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const touch = e.touches?.[0] || e.changedTouches?.[0];
+    const clientX = touch ? touch.clientX : e.clientX;
+    const clientY = touch ? touch.clientY : e.clientY;
     const scale = zoom * (dualView ? 0.5 : 1);
     const x = (clientX - rect.left) / scale,
       y = (clientY - rect.top) / scale;
@@ -1145,12 +1222,10 @@ const PerfboardDesigner = function PerfboardDesigner() {
       return;
     }
     if (tool === "eraser") {
-      // First try to find and delete a component at this hole
       const idx = findCompAt(h);
       if (idx >= 0) {
         deleteCompWithHoles(idx);
       } else {
-        // Just clear the hole color
         pushHistory();
         setHoleColors(hc => {
           const nh = {
@@ -1160,6 +1235,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
           return nh;
         });
       }
+      setEraserDragging(true);
       return;
     }
     if (tool === "rail") {
@@ -1173,8 +1249,11 @@ const PerfboardDesigner = function PerfboardDesigner() {
         pushHistory();
         const sameRow = wireStart.r === h.r;
         const sameCol = wireStart.c === h.c;
-        const useRow = railMode === "row" ? true : railMode === "col" ? false : sameRow;
-        if (useRow || sameRow) {
+
+        // Priority: exact alignment wins, then railMode for ambiguous cases
+        const goHorizontal = sameRow ? true : sameCol ? false : railMode !== "col";
+        const goVertical = sameCol ? true : sameRow ? false : railMode !== "row";
+        if (sameRow || goHorizontal && !sameCol && !goVertical) {
           // Horizontal rail
           const r = wireStart.r;
           const cMin = Math.min(wireStart.c, h.c),
@@ -1201,7 +1280,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
             for (let c = cMin; c <= cMax; c++) nh[hk(r, c)] = color;
             return nh;
           });
-        } else if (sameCol) {
+        } else if (sameCol || goVertical && !sameRow && !goHorizontal) {
           // Vertical rail
           const c = wireStart.c;
           const rMin = Math.min(wireStart.r, h.r),
@@ -1429,16 +1508,47 @@ const PerfboardDesigner = function PerfboardDesigner() {
   const handleDragMove = e => {
     const h = getHole(e);
     setHoverHole(h);
+    if (eraserDragging && h && tool === "eraser") {
+      const k = hk(h.r, h.c);
+      setHoleColors(hc => {
+        if (!hc[k]) return hc;
+        const nh = {
+          ...hc
+        };
+        delete nh[k];
+        return nh;
+      });
+      e.preventDefault?.();
+      return;
+    }
     if (!dragging || !h) return;
     e.preventDefault?.();
   };
   const handleDragEnd = e => {
+    setEraserDragging(false);
     if (!dragging) return;
     const h = getHole(e) || hoverHole;
     if (h) {
       const newR = h.r - dragging.offsetR,
         newC = h.c - dragging.offsetC;
-      if (newR >= 0 && newC >= 0 && newR < board.rows && newC < board.cols) {
+      // Calculate component dimensions for bounds check
+      const dc = components[dragging.idx];
+      let compW = 1,
+        compH = 1;
+      if (dc.w) compW = dc.w;
+      if (dc.h) compH = dc.h;
+      if (dc.type === "header") {
+        compW = dc.dir === "h" ? dc.len || 1 : 1;
+        compH = dc.dir === "v" ? dc.len || 1 : 1;
+      }
+      if (dc.type === "library") {
+        const ld = [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === dc.libraryId);
+        if (ld) {
+          compW = ld.w;
+          compH = ld.h;
+        }
+      }
+      if (newR >= 0 && newC >= 0 && newR + compH - 1 < board.rows && newC + compW - 1 < board.cols) {
         pushHistory();
         const oldComp = components[dragging.idx];
         const oldHoles = getCompHoles(oldComp);
@@ -1607,9 +1717,43 @@ const PerfboardDesigner = function PerfboardDesigner() {
       if ((e.key === "Delete" || e.key === "Backspace") && selectedComp !== null && !showSaveModal && !showLoadModal) {
         deleteCompWithHoles(selectedComp);
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
         e.preventDefault();
         undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.shiftKey && e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        redo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "d" && selectedComp !== null) {
+        e.preventDefault();
+        pushHistory();
+        const orig = components[selectedComp];
+        const dup = {
+          ...JSON.parse(JSON.stringify(orig))
+        };
+        if (dup.from) {
+          dup.from = {
+            r: dup.from.r,
+            c: dup.from.c + 1
+          };
+          dup.to = {
+            r: dup.to.r,
+            c: dup.to.c + 1
+          };
+        } else if (dup.origin) {
+          dup.origin = {
+            r: dup.origin.r + 1,
+            c: dup.origin.c
+          };
+        } else if (dup.pos) {
+          dup.pos = {
+            r: dup.pos.r + 1,
+            c: dup.pos.c
+          };
+        }
+        setComponents(cs => [...cs, dup]);
+        setSelectedComp(components.length);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
@@ -1622,7 +1766,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [editingLabel, selectedComp, showSaveModal, showLoadModal, undo]);
+  }, [editingLabel, selectedComp, showSaveModal, showLoadModal, undo, redo, pushHistory, components]);
 
   // ─── Rendering ───
   const renderBoard = (isBack = false, ref = null) => {
@@ -1655,7 +1799,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
         fontSize: 7,
         fill: "#778",
         fontFamily: "monospace"
-      }, String.fromCharCode(65 + r)));
+      }, coord(r, 0).replace(/\d+$/, '')));
     }
     for (let r = 0; r < board.rows; r++) for (let c = 0; c < board.cols; c++) {
       const {
@@ -1713,15 +1857,36 @@ const PerfboardDesigner = function PerfboardDesigner() {
       onMouseMove: isBack ? undefined : handleDragMove,
       onMouseUp: isBack ? undefined : handleDragEnd,
       onTouchStart: isBack ? undefined : e => {
+        if (e.touches.length === 2) {
+          const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+          pinchRef.current = d;
+          e.preventDefault();
+          return;
+        }
         handleDragStart(e);
       },
       onTouchMove: isBack ? undefined : e => {
+        if (e.touches.length === 2 && pinchRef.current) {
+          const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+          const scale = d / pinchRef.current;
+          setZoom(z => Math.max(0.2, Math.min(3, z * scale)));
+          pinchRef.current = d;
+          e.preventDefault();
+          return;
+        }
         handleDragMove(e);
       },
-      onTouchEnd: isBack ? undefined : handleDragEnd,
+      onTouchEnd: isBack ? undefined : e => {
+        pinchRef.current = null;
+        handleDragEnd(e);
+      },
       onMouseLeave: () => {
         setHoverHole(null);
         if (!isBack) handleDragEnd();
+      },
+      onWheel: isBack ? undefined : e => {
+        e.preventDefault();
+        setZoom(z => Math.max(0.2, Math.min(3, z + (e.deltaY < 0 ? 0.1 : -0.1))));
       },
       style: {
         cursor: tool === "select" ? dragging ? "grabbing" : "default" : tool === "eraser" ? "pointer" : "crosshair",
@@ -1745,7 +1910,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
       height: svgH,
       opacity: bgOpacity,
       preserveAspectRatio: "xMidYMid meet"
-    }), isBB && /*#__PURE__*/React.createElement("rect", {
+    }), isBB && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
       x: BP - 4,
       y: hp(board.gapAfterRow || 7, 0).y - HS / 2 + 2,
       width: svgW - BP * 2 + 8,
@@ -1753,7 +1918,44 @@ const PerfboardDesigner = function PerfboardDesigner() {
       rx: 2,
       fill: isBack ? "#0a3a1a" : "#b8a888",
       opacity: 0.5
-    }), axisLabels, holes, !isBack && renderComponents(), !isBack && renderWirePreview(), !isBack && hoverHole && !dragging && /*#__PURE__*/React.createElement("circle", {
+    }), !isBack && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("text", {
+      x: BP - 12,
+      y: hp(0, 0).y + 3,
+      fontSize: 8,
+      fill: "#cc3333",
+      fontFamily: "monospace",
+      fontWeight: "bold"
+    }, "+"), /*#__PURE__*/React.createElement("text", {
+      x: BP - 12,
+      y: hp(1, 0).y + 3,
+      fontSize: 8,
+      fill: "#cc3333",
+      fontFamily: "monospace",
+      fontWeight: "bold"
+    }, "+"), /*#__PURE__*/React.createElement("text", {
+      x: BP - 12,
+      y: hp((board.rows || 14) - 2, 0).y + 3,
+      fontSize: 8,
+      fill: "#3333cc",
+      fontFamily: "monospace",
+      fontWeight: "bold"
+    }, "\u2212"), /*#__PURE__*/React.createElement("text", {
+      x: BP - 12,
+      y: hp((board.rows || 14) - 1, 0).y + 3,
+      fontSize: 8,
+      fill: "#3333cc",
+      fontFamily: "monospace",
+      fontWeight: "bold"
+    }, "\u2212"))), axisLabels, holes, !isBack && renderComponents(), !isBack && renderWirePreview(), !isBack && wireStart && /*#__PURE__*/React.createElement("circle", {
+      className: "pb-pulse",
+      cx: hp(wireStart.r, wireStart.c).x,
+      cy: hp(wireStart.r, wireStart.c).y,
+      r: 7,
+      fill: "none",
+      stroke: color,
+      strokeWidth: 2,
+      opacity: 0.6
+    }), !isBack && hoverHole && !dragging && /*#__PURE__*/React.createElement("circle", {
       cx: hp(hoverHole.r, hoverHole.c).x,
       cy: hp(hoverHole.r, hoverHole.c).y,
       r: PR + 2,
@@ -2093,7 +2295,6 @@ const PerfboardDesigner = function PerfboardDesigner() {
     }
     if (comp.origin) {
       const def = comp.type === "library" ? [...PRESET_LIBRARY, ...customLibrary].find(l => l.id === comp.libraryId) : null;
-      const pins = def ? def.pins : [];
       if (comp.type === "ic") {
         const ps = [];
         for (let i = 0; i < comp.w; i++) {
@@ -2122,6 +2323,34 @@ const PerfboardDesigner = function PerfboardDesigner() {
           });
         }));
       }
+      if (comp.type === "header") {
+        const hPins = [];
+        for (let i = 0; i < comp.len; i++) {
+          const pr = comp.origin.r + (comp.dir === "v" ? i : 0),
+            pc = comp.origin.c + (comp.dir === "h" ? i : 0);
+          if (pr < board.rows && pc < board.cols) hPins.push({
+            r: pr - comp.origin.r,
+            c: pc - comp.origin.c
+          });
+        }
+        return /*#__PURE__*/React.createElement("g", {
+          key: idx
+        }, hPins.map((p, i) => {
+          const {
+            x,
+            y
+          } = hp(comp.origin.r + p.r, comp.origin.c + p.c);
+          return /*#__PURE__*/React.createElement("circle", {
+            key: i,
+            cx: svgW - x,
+            cy: y,
+            r: PR - 1,
+            fill: "#c9a84c",
+            opacity: 0.6
+          });
+        }));
+      }
+      const pins = def ? def.pins : [];
       return /*#__PURE__*/React.createElement("g", {
         key: idx
       }, pins.map((p, i) => {
@@ -2158,12 +2387,13 @@ const PerfboardDesigner = function PerfboardDesigner() {
       });
     }
     if (tool === "rail") {
-      // Show dots along the rail path
       const dots = [];
       const sameRow = wireStart.r === hoverHole.r,
         sameCol = wireStart.c === hoverHole.c;
-      const useRow = railMode === "row" ? true : railMode === "col" ? false : sameRow || !sameCol;
-      if (useRow || sameRow) {
+      // Same logic as handler: alignment wins, then railMode for ambiguous
+      const doH = sameRow || !sameCol && !sameRow && railMode !== "col";
+      const doV = sameCol || !sameRow && !sameCol && railMode !== "row";
+      if (doH) {
         const r = wireStart.r,
           cMin = Math.min(wireStart.c, hoverHole.c),
           cMax = Math.max(wireStart.c, hoverHole.c);
@@ -2173,7 +2403,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
             y
           } = hp(r, c);
           dots.push(/*#__PURE__*/React.createElement("circle", {
-            key: `r${c}`,
+            key: `h${c}`,
             cx: x,
             cy: y,
             r: PR,
@@ -2182,7 +2412,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
           }));
         }
       }
-      if ((sameCol || !useRow) && !sameRow) {
+      if (doV) {
         const c = sameCol ? wireStart.c : hoverHole.c,
           rMin = Math.min(wireStart.r, hoverHole.r),
           rMax = Math.max(wireStart.r, hoverHole.r);
@@ -2192,7 +2422,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
             y
           } = hp(r, c);
           dots.push(/*#__PURE__*/React.createElement("circle", {
-            key: `c${r}`,
+            key: `v${r}`,
             cx: x,
             cy: y,
             r: PR,
@@ -2263,9 +2493,20 @@ const PerfboardDesigner = function PerfboardDesigner() {
     letterSpacing: 2,
     marginBottom: 2
   };
-  const statusText = wireStart ? `De: ${coord(wireStart.r, wireStart.c)} →` : hoverHole ? coord(hoverHole.r, hoverHole.c) : "—";
-  const allLib = [...PRESET_LIBRARY, ...customLibrary];
-  const categories = [...new Set(allLib.map(l => l.cat))];
+  const statusText = (() => {
+    if (wireStart && hoverHole) {
+      const dr = Math.abs(hoverHole.r - wireStart.r),
+        dc = Math.abs(hoverHole.c - wireStart.c);
+      const dist = Math.sqrt(dr * dr + dc * dc);
+      const mm = (dist * 2.54).toFixed(1);
+      return `${coord(wireStart.r, wireStart.c)} → ${coord(hoverHole.r, hoverHole.c)} · ${dr + dc} furos · ${mm}mm`;
+    }
+    if (wireStart) return `De: ${coord(wireStart.r, wireStart.c)} →`;
+    if (hoverHole) return coord(hoverHole.r, hoverHole.c);
+    return "—";
+  })();
+  const allLib = useMemo(() => [...PRESET_LIBRARY, ...customLibrary], [customLibrary]);
+  const categories = useMemo(() => [...new Set(allLib.map(l => l.cat))], [allLib]);
   return /*#__PURE__*/React.createElement("div", {
     style: {
       height: "100vh",
@@ -2277,6 +2518,8 @@ const PerfboardDesigner = function PerfboardDesigner() {
       overflow: "hidden"
     }
   }, /*#__PURE__*/React.createElement("style", null, `
+        @keyframes pb-pulse { 0%,100%{r:7;opacity:0.6} 50%{r:10;opacity:0.3} }
+        .pb-pulse { animation: pb-pulse 1s ease-in-out infinite; }
         .pb-sidebar::-webkit-scrollbar { width: 6px; }
         .pb-sidebar::-webkit-scrollbar-track { background: #0a0e17; }
         .pb-sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
@@ -2358,14 +2601,20 @@ const PerfboardDesigner = function PerfboardDesigner() {
       padding: "3px 8px"
     }
   }, saveStatus === "saving" ? "⏳" : saveStatus === "saved" ? "✓" : "💾"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowSaveModal(true),
+    onClick: () => {
+      closeAllModals();
+      setShowSaveModal(true);
+    },
     style: {
       ...btn(false, "#3b82f6"),
       width: "auto",
       padding: "3px 8px"
     }
   }, "Guardar como"), /*#__PURE__*/React.createElement("button", {
-    onClick: loadProjectList,
+    onClick: () => {
+      closeAllModals();
+      loadProjectList();
+    },
     style: {
       ...btn(false, "#f59e0b"),
       width: "auto",
@@ -2421,7 +2670,10 @@ const PerfboardDesigner = function PerfboardDesigner() {
       fontFamily: "inherit"
     }
   }, b.label)), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowBoardCreator(true),
+    onClick: () => {
+      closeAllModals();
+      setShowBoardCreator(true);
+    },
     style: {
       padding: "2px 8px",
       borderRadius: 3,
@@ -2531,10 +2783,14 @@ const PerfboardDesigner = function PerfboardDesigner() {
   }, /*#__PURE__*/React.createElement("div", {
     style: secTitle
   }, "BIBLIOTECA / COMPONENTES"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowLibrary(true),
+    onClick: () => {
+      closeAllModals();
+      setShowLibrary(true);
+    },
     style: btn(false, "#1abc9c")
   }, "\u25EB Abrir biblioteca"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
+      closeAllModals();
       setShowCreator(true);
       setCreatorPins({});
       setCreatorName("");
@@ -2712,6 +2968,11 @@ const PerfboardDesigner = function PerfboardDesigner() {
       ...btn(false, history.length ? "#f59e0b" : "#555")
     }
   }, "\u21BA Desfazer (Ctrl+Z)"), /*#__PURE__*/React.createElement("button", {
+    onClick: redo,
+    style: {
+      ...btn(false, redoStack.length ? "#3b82f6" : "#555")
+    }
+  }, "\u21BB Refazer (Ctrl+Y)"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (selectedComp !== null) deleteCompWithHoles(selectedComp);
     },
@@ -2764,13 +3025,35 @@ const PerfboardDesigner = function PerfboardDesigner() {
       const b = new Blob([svgRef.current.outerHTML], {
         type: "image/svg+xml"
       });
+      const u = URL.createObjectURL(b);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(b);
+      a.href = u;
       a.download = `${projectName}_pcb.svg`;
       a.click();
+      setTimeout(() => URL.revokeObjectURL(u), 2000);
     },
     style: btn(false, "#9b59b6")
-  }, "\u2193 SVG")), /*#__PURE__*/React.createElement("div", {
+  }, "\u2193 SVG"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!svgRef.current) return;
+      const svgData = new XMLSerializer().serializeToString(svgRef.current);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.width * 2;
+        canvas.height = img.height * 2;
+        ctx.scale(2, 2);
+        ctx.drawImage(img, 0, 0);
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = `${projectName}_pcb.png`;
+        a.click();
+      };
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    },
+    style: btn(false, "#e67e22")
+  }, "\u2193 PNG")), /*#__PURE__*/React.createElement("div", {
     style: {
       borderTop: "1px solid #1e293b",
       margin: "3px 0",
@@ -2889,7 +3172,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
       fontSize: 7,
       color: "#475569"
     }
-  }, board.cols, "\xD7", board.rows, " \xB7 ", components.length, " comp. \xB7 ", board.type === "breadboard" ? "Breadboard" : "Perfboard"))), /*#__PURE__*/React.createElement("div", {
+  }, board.cols, "\xD7", board.rows, " \xB7 ", components.length, " comp. (", components.filter(c => c.type === "wire").length, "F ", components.filter(c => ["resistor", "capacitor", "led", "diode"].includes(c.type)).length, "P ", components.filter(c => ["ic", "library", "header"].includes(c.type)).length, "CI) \xB7 ", board.type === "breadboard" ? "BB" : "PB"))), /*#__PURE__*/React.createElement("div", {
     className: "pb-canvas",
     ref: canvasRef,
     style: {
