@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual — Esquemas de Ligação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#1B3A6B; --blue-light:#e8f0fc; --blue-dark:#0F2447;
+  --purple:#8b5cf6; --purple-light:#f3f0ff;
+  --accent:#3b82f6; --accent-light:#dbeafe;
+  --red:#dc2626; --amber:#d97706; --green:#059669;
+  --bg:#f8f9fc; --card:#fff; --text:#1e293b; --muted:#64748b; --border:#d4dde8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var(--bg);line-height:1.75}
+
+@media print {
+  body{font-size:11px;line-height:1.5;background:#fff}
+  .no-print,.hero-bg,.toc{display:none!important}
+  .hero{min-height:auto!important;padding:20px!important}
+  section{break-inside:avoid;page-break-inside:avoid}
+  .card{box-shadow:none!important;border:1px solid #ddd}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:15mm}
+}
+
+.hero{position:relative;min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px 48px;overflow:hidden;background:linear-gradient(160deg,var(--blue-dark) 0%,var(--blue) 40%,#3b5998 100%);color:#fff}
+.hero-bg{position:absolute;inset:0;opacity:0.05;background-image:
+  radial-gradient(circle at 2px 2px, #fff 1px, transparent 1px);
+  background-size:22px 22px}
+.hero h1{font-size:clamp(1.8rem,5vw,2.8rem);font-weight:800;line-height:1.15;letter-spacing:-0.02em;margin-bottom:8px;position:relative}
+.hero h1 span{color:#93c5fd}
+.hero .subtitle{font-size:clamp(0.9rem,2vw,1.1rem);opacity:0.8;max-width:600px;margin:0 auto 20px;font-weight:300}
+.hero .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 16px;font-size:0.8rem;font-weight:600;backdrop-filter:blur(4px)}
+.hero .print-btn{position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}
+.hero .print-btn:hover{background:rgba(255,255,255,0.25)}
+
+.toc{max-width:880px;margin:-28px auto 0;position:relative;z-index:1;background:var(--card);border-radius:14px;padding:24px 28px;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid var(--border)}
+.toc h2{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent);margin-bottom:12px;font-weight:700}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+.toc a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.85rem;font-weight:500;transition:all 0.15s}
+.toc a:hover{background:var(--blue-light);color:var(--accent)}
+.toc a .num{min-width:22px;height:22px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700}
+
+.content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+
+section{margin-bottom:40px}
+section h2{font-size:1.4rem;font-weight:800;color:var(--blue-dark);margin-bottom:6px;padding-bottom:8px;border-bottom:3px solid var(--accent);display:flex;align-items:center;gap:10px}
+section h2 .sec-num{background:var(--accent);color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0}
+section h3{font-size:1.05rem;font-weight:700;color:var(--accent);margin:20px 0 8px;display:flex;align-items:center;gap:6px}
+section h3::before{content:'';width:4px;height:18px;background:var(--purple);border-radius:2px;flex-shrink:0}
+
+p{margin-bottom:12px}
+
+.card{background:var(--card);border-radius:10px;padding:18px 20px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,0.04);border:1px solid var(--border)}
+.card.warning{border-left:4px solid var(--red);background:#fef2f2}
+.card.tip{border-left:4px solid var(--green);background:#f0fdf4}
+.card.info{border-left:4px solid var(--accent);background:#eff6ff}
+.card.purple{border-left:4px solid var(--purple);background:var(--purple-light)}
+.card-title{font-weight:700;font-size:0.92rem;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.card.warning .card-title{color:var(--red)}
+.card.tip .card-title{color:var(--green)}
+.card.info .card-title{color:var(--accent)}
+.card.purple .card-title{color:var(--purple)}
+
+.steps{counter-reset:step;margin:12px 0}
+.step{counter-increment:step;padding:10px 0 10px 48px;position:relative;font-size:0.92rem;border-left:2px solid var(--border);margin-left:16px}
+.step:last-child{border-left-color:transparent}
+.step::before{content:counter(step);position:absolute;left:-15px;top:8px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700}
+.step strong{color:var(--blue-dark)}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.88rem}
+th{background:var(--accent);color:#fff;padding:8px 12px;text-align:left;font-weight:600;font-size:0.82rem}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:nth-child(even) td{background:#f0f4fa}
+td code{font-family:'JetBrains Mono',monospace;font-size:0.82rem;background:var(--accent-light);padding:1px 5px;border-radius:3px;color:var(--blue-dark)}
+
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:14px 0}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+
+.kbd{display:inline-block;background:#1e293b;color:#e2e8f0;padding:1px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;border:1px solid #334155}
+.color-swatch{display:inline-flex;align-items:center;gap:5px;margin:2px 4px}
+.color-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(0,0,0,0.15);flex-shrink:0}
+
+.footer{max-width:880px;margin:0 auto;padding:20px 24px;text-align:center;color:var(--muted);font-size:0.78rem;border-top:2px solid var(--border)}
+.footer a{color:var(--accent);text-decoration:none}
+
+@media(max-width:640px){
+  .hero{padding:40px 16px 36px}
+  .toc{margin:-20px 12px 0;padding:16px}
+  .content{padding:24px 14px 40px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-bg"></div>
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir</button>
+  <h1>Manual de Utilização<br><span>Esquemas de Ligação</span></h1>
+  <p class="subtitle">Criar diagramas de cablagem com pinagem real de microcontroladores, sensores e atuadores — do esquema à montagem</p>
+  <div class="badge">🔌 Nexus ESECCinfaesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende</div>
+</div>
+
+<nav class="toc no-print">
+  <h2>Índice</h2>
+  <div class="toc-grid">
+    <a href="#s1"><span class="num">1</span> Introdução e conceito</a>
+    <a href="#s2"><span class="num">2</span> Interface do programa</a>
+    <a href="#s3"><span class="num">3</span> Adicionar componentes</a>
+    <a href="#s4"><span class="num">4</span> Criar componentes custom</a>
+    <a href="#s5"><span class="num">5</span> Ligar pinos (cabos)</a>
+    <a href="#s6"><span class="num">6</span> Propriedades do cabo</a>
+    <a href="#s7"><span class="num">7</span> Validação e avisos</a>
+    <a href="#s8"><span class="num">8</span> Recomendações automáticas</a>
+    <a href="#s9"><span class="num">9</span> Modos de visualização</a>
+    <a href="#s10"><span class="num">10</span> Edição e navegação</a>
+    <a href="#s11"><span class="num">11</span> Guardar e abrir projetos</a>
+    <a href="#s12"><span class="num">12</span> Imprimir e exportar</a>
+    <a href="#s13"><span class="num">13</span> Atalhos de teclado</a>
+    <a href="#s14"><span class="num">14</span> Biblioteca de MCUs</a>
+    <a href="#s15"><span class="num">15</span> Biblioteca de componentes</a>
+    <a href="#s16"><span class="num">16</span> Exemplo prático passo a passo</a>
+  </div>
+</nav>
+
+<div class="content">
+
+<!-- ───────── 1 ───────── -->
+<section id="s1">
+  <h2><span class="sec-num">1</span> Introdução e Conceito</h2>
+
+  <p>O <strong>Esquemas de Ligação</strong> é um software de diagramas de cablagem que permite desenhar as ligações elétricas entre microcontroladores, sensores, atuadores e outros componentes. Funciona 100% no browser, sem instalação, e guarda projetos localmente.</p>
+
+  <h3>Para que serve?</h3>
+  <p>Este software responde à pergunta <em>"que pino liga onde?"</em>. Antes de montar um circuito numa breadboard ou perfboard, o aluno desenha aqui o esquema de ligações — qual pino do Arduino liga a qual pino do sensor, que fios usar, que protocolo de comunicação (I2C, SPI, UART).</p>
+
+  <h3>Diferença entre esquema de ligações e layout perfboard</h3>
+  <table>
+    <tr><th></th><th>Esquemas de Ligação</th><th>Perfboard Designer</th></tr>
+    <tr><td>Pergunta</td><td>Que pino liga onde?</td><td>Onde colocar fisicamente na placa?</td></tr>
+    <tr><td>Representação</td><td>Blocos com pinos nomeados</td><td>Grelha de furos com componentes</td></tr>
+    <tr><td>Fios</td><td>Curvas lógicas entre pinos</td><td>Segmentos físicos entre furos</td></tr>
+    <tr><td>Quando usar</td><td>Primeiro — planear o circuito</td><td>Segundo — planear a montagem</td></tr>
+    <tr><td>Resultado</td><td>Tabela de ligações pino-a-pino</td><td>Layout para soldar</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 Fluxo de trabalho recomendado</div>
+    <strong>1.</strong> Esquema de Ligação → <strong>2.</strong> Validar com o professor → <strong>3.</strong> Prototipar em breadboard → <strong>4.</strong> Perfboard Designer → <strong>5.</strong> Soldar
+  </div>
+</section>
+
+<!-- ───────── 2 ───────── -->
+<section id="s2">
+  <h2><span class="sec-num">2</span> Interface do Programa</h2>
+
+  <p>A interface está dividida em três zonas principais:</p>
+
+  <h3>Barra superior (header)</h3>
+  <p>Contém o nome do projeto (editável), botões de guardar/abrir/exportar. É idêntica ao Perfboard Designer para manter consistência.</p>
+
+  <h3>Sidebar esquerda</h3>
+  <p>Organizada em secções verticais:</p>
+  <table>
+    <tr><th>Secção</th><th>Conteúdo</th></tr>
+    <tr><td>Ferramentas</td><td><strong>Selecionar</strong> (mover/editar), <strong>Ligar pinos</strong> (criar fios), <strong>Borracha</strong> (apagar)</td></tr>
+    <tr><td>Adicionar componente</td><td>Botão para abrir a biblioteca. Botões para criar MCU ou componente custom.</td></tr>
+    <tr><td>Cabo / Fio</td><td>Aparece ao selecionar "Ligar pinos". Nome do cabo, cor (14 presets).</td></tr>
+    <tr><td>Vista dos fios</td><td>Alternar entre modo <strong>Linhas</strong> e modo <strong>Tags</strong>.</td></tr>
+    <tr><td>Edição</td><td>Desfazer, Refazer, Apagar seleção, Limpar tudo.</td></tr>
+    <tr><td>Imprimir / Exportar</td><td>Imprimir esquema, exportar HTML, SVG e PNG.</td></tr>
+    <tr><td>Selecionado</td><td>Informação do componente selecionado (nome, categoria, pinos, ligações, lista de fios com AWG). Botão para editar pinos.</td></tr>
+    <tr><td>Avisos</td><td>Painel de alertas de validação elétrica e recomendações por componente (aparece automaticamente).</td></tr>
+  </table>
+
+  <h3>Canvas central (área de trabalho)</h3>
+  <p>A área onde se colocam e ligam os componentes. Fundo escuro com grelha de pontos. Suporta pan (arrastar o fundo) e zoom (scroll do rato). No canto superior direito há botões de zoom (+/−) e reset.</p>
+
+  <h3>Canvas central</h3>
+  <p>Ao passar o cursor sobre um pino, aparece um <strong>destaque circular</strong> com tooltip mostrando o nome do pino — confirma visualmente que está a apontar corretamente antes de clicar. Suporta <strong>zoom com scroll do rato</strong>, <strong>pinch zoom em tablets</strong>, botões +/− e botão <strong>"Ajustar"</strong> (zoom-to-fit que centra todos os componentes).</p>
+
+  <h3>Barra de estado (rodapé)</h3>
+  <p>Mostra a ferramenta ativa, o modo de visualização (Linhas/Tags), número de componentes e ligações, e o nome do projeto.</p>
+</section>
+
+<!-- ───────── 3 ───────── -->
+<section id="s3">
+  <h2><span class="sec-num">3</span> Adicionar Componentes</h2>
+
+  <h3>Da biblioteca</h3>
+  <div class="steps">
+    <div class="step">Clicar em <strong>"+ Adicionar da biblioteca"</strong> na sidebar, ou clicar no botão de uma categoria específica</div>
+    <div class="step">No modal que aparece, os componentes estão organizados por <strong>categoria</strong> (Arduino, ESP, Sensores, Atuadores, Displays, etc.)</div>
+    <div class="step">Clicar no componente desejado — ele aparece no canvas com posição aleatória</div>
+    <div class="step"><strong>Arrastar</strong> o componente para a posição desejada (ferramenta Selecionar ativa)</div>
+  </div>
+
+  <p>Cada componente aparece como um <strong>bloco retangular</strong> colorido com o nome no topo e os pinos listados nos lados esquerdo e/ou direito. Os pinos têm <strong>círculos coloridos</strong> que indicam o tipo (digital, alimentação, I2C, etc.).</p>
+
+  <h3>Pinos e tipos</h3>
+  <table>
+    <tr><th>Cor do pino</th><th>Tipo</th><th>Exemplos</th></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#3498db"></span></span></td><td>Digital</td><td>D2, D3, D4...</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#e67e22"></span></span></td><td>Analógico</td><td>A0, A1, A2...</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#e74c3c"></span></span></td><td>Alimentação</td><td>VCC, 5V, 3V3, VIN</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#34495e"></span></span></td><td>GND</td><td>GND, 0V</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#2ecc71"></span></span></td><td>I2C</td><td>SDA, SCL</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#9b59b6"></span></span></td><td>SPI</td><td>MOSI, MISO, SCK, CS</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#1abc9c"></span></span></td><td>UART</td><td>TX, RX</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#f39c12"></span></span></td><td>PWM</td><td>D3~, D5~, D6~...</td></tr>
+    <tr><td><span class="color-swatch"><span class="color-dot" style="background:#95a5a6"></span></span></td><td>Outro</td><td>RST, EN, NC, AREF</td></tr>
+  </table>
+</section>
+
+<!-- ───────── 4 ───────── -->
+<section id="s4">
+  <h2><span class="sec-num">4</span> Criar Componentes Custom</h2>
+
+  <p>Se o componente que precisa não existe na biblioteca, pode criar um personalizado — tanto MCU/placas como sensores/atuadores.</p>
+
+  <h3>Criar um MCU / Placa</h3>
+  <div class="steps">
+    <div class="step">Clicar em <strong>"✚ Criar MCU / Placa"</strong> na sidebar</div>
+    <div class="step">Preencher <strong>nome</strong> (ex: "XIAO nRF52840"), <strong>categoria</strong> e <strong>cor</strong></div>
+    <div class="step">Na secção <strong>Pinos Esquerdos</strong>, definir cada pino: nome (ex: "D0") e tipo (Digital, I2C, etc.)</div>
+    <div class="step">Na secção <strong>Pinos Direitos</strong>, definir os pinos do lado oposto</div>
+    <div class="step">Usar <strong>"+ Pino"</strong> para adicionar mais pinos e <strong>✕</strong> para remover</div>
+    <div class="step">Clicar <strong>"💾 Guardar"</strong> — o componente fica disponível na biblioteca</div>
+  </div>
+
+  <h3>Criar um componente (sensor/atuador)</h3>
+  <p>O processo é idêntico, mas usa-se o botão <strong>"✚ Criar componente"</strong>. Componentes simples (sensores I2C, por exemplo) normalmente têm pinos só num lado (esquerdo), enquanto drivers (A4988, L298N) podem ter pinos dos dois lados.</p>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Onde ficam guardados?</div>
+    Os componentes personalizados ficam no <strong>localStorage</strong> do browser — persistem entre sessões mas são locais ao computador. Para partilhar, use a função "📥 Ficheiro" que inclui os componentes custom no JSON exportado.
+  </div>
+
+  <h3>Dicas para pinagem</h3>
+  <div class="grid-2">
+    <div class="card tip">
+      <div class="card-title">✅ Boa prática</div>
+      <p style="font-size:0.88rem;margin:0">Colocar VCC e GND no topo, seguidos pelos pinos de comunicação (I2C, SPI), e depois os pinos digitais/analógicos. Usar nomes iguais aos do datasheet.</p>
+    </div>
+    <div class="card warning">
+      <div class="card-title">⚠️ Evitar</div>
+      <p style="font-size:0.88rem;margin:0">Nomes genéricos como "Pino1", "Pino2". Usar os nomes reais: "VCC", "GND", "SDA", "TRIG", "ECHO", etc.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── 5 ───────── -->
+<section id="s5">
+  <h2><span class="sec-num">5</span> Ligar Pinos (Cabos)</h2>
+
+  <p>Criar ligações entre componentes é a função central do programa.</p>
+
+  <h3>Passos para ligar</h3>
+  <div class="steps">
+    <div class="step">Selecionar a ferramenta <strong>⚡ Ligar pinos</strong> na sidebar</div>
+    <div class="step">Definir o <strong>nome do cabo</strong> (ex: "SDA", "VCC", "SENSOR_TRIG") no campo de texto</div>
+    <div class="step">Escolher a <strong>cor</strong> — clicar num preset (VCC, GND, SDA, SCL...) ou escolher manualmente. O preset preenche automaticamente o nome.</div>
+    <div class="step">Clicar no <strong>primeiro pino</strong> (aparece um círculo pulsante a confirmar)</div>
+    <div class="step">Clicar no <strong>segundo pino</strong> (de outro componente) — a ligação é criada</div>
+    <div class="step">Repetir para todas as ligações do circuito</div>
+  </div>
+
+  <h3>Cores pré-definidas</h3>
+  <table>
+    <tr><th>Preset</th><th>Cor</th><th>Uso típico</th></tr>
+    <tr><td>VCC</td><td><span class="color-swatch"><span class="color-dot" style="background:#e74c3c"></span> Vermelho</span></td><td>Alimentação positiva (5V, 3.3V)</td></tr>
+    <tr><td>GND</td><td><span class="color-swatch"><span class="color-dot" style="background:#3498db"></span> Azul</span></td><td>Massa (0V)</td></tr>
+    <tr><td>SDA</td><td><span class="color-swatch"><span class="color-dot" style="background:#2ecc71"></span> Verde</span></td><td>I2C dados</td></tr>
+    <tr><td>SCL</td><td><span class="color-swatch"><span class="color-dot" style="background:#f39c12"></span> Amarelo</span></td><td>I2C relógio</td></tr>
+    <tr><td>TX / RX</td><td><span class="color-swatch"><span class="color-dot" style="background:#9b59b6"></span> <span class="color-dot" style="background:#1abc9c"></span> Roxo / Cyan</span></td><td>UART transmissão / receção</td></tr>
+    <tr><td>MOSI / MISO / SCK / CS</td><td><span class="color-swatch"><span class="color-dot" style="background:#e67e22"></span> <span class="color-dot" style="background:#34495e"></span> <span class="color-dot" style="background:#e91e63"></span> <span class="color-dot" style="background:#00bcd4"></span></span></td><td>SPI (4 fios)</td></tr>
+    <tr><td>SIG1–SIG4</td><td>Diversas</td><td>Sinais genéricos (TRIG, ECHO, IN1...)</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 Dica: nomes personalizados</div>
+    Pode escrever qualquer nome no campo "Nome do cabo". Por exemplo, "MOTOR_DIR", "BUZZER", "LED_R". Este nome aparece na etiqueta do fio e na tabela de ligações ao imprimir. Se não escrever nada, o sistema gera uma tag automaticamente com base nos pinos ligados.
+  </div>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Tags automáticas</div>
+    Se deixar o campo do nome vazio, o sistema analisa automaticamente os tipos de pino e gera uma tag: ligar "A4/SDA" a "SDA" gera "SDA"; ligar "D3" a "TRIG" gera "DIG_TRIG"; ligar "5V" a "VCC" gera "VCC". Pinos conhecidos (SDA, SCL, TX, RX, MOSI, etc.) são sempre reconhecidos.
+  </div>
+  <div class="card warning">
+    <div class="card-title">⚠️ Fios duplicados</div>
+    O sistema impede a criação de fios duplicados exatos (mesmo par de pinos de origem e destino). Mas permite ligar <strong>múltiplos fios ao mesmo pino</strong> — essencial para VCC que alimenta vários componentes, ou SDA/SCL partilhados em I2C.
+  </div>
+</section>
+
+<!-- ───────── 6 ───────── -->
+<section id="s6">
+  <h2><span class="sec-num">6</span> Propriedades do Cabo</h2>
+
+  <p>Cada fio criado no esquema pode ter propriedades elétricas e físicas associadas — secção do cabo (AWG), cor real, comprimento, tensão e corrente esperadas. Isto transforma o diagrama num documento de engenharia completo.</p>
+
+  <h3>Ativar o painel</h3>
+  <p>Com a ferramenta <strong>⚡ Ligar pinos</strong> ativa, clicar no botão <strong>"▸ 📐 Propriedades do cabo"</strong> na sidebar. O painel expande com 5 campos editáveis. Pode colapsar novamente quando não for necessário.</p>
+
+  <h3>Campos disponíveis</h3>
+  <table>
+    <tr><th>Campo</th><th>Descrição</th><th>Valores</th></tr>
+    <tr><td><strong>AWG</strong></td><td>Calibre do fio (secção transversal)</td><td>AWG 30 (0.051mm²) a AWG 12 (3.31mm²). Inclui mm² e amperes máximos.</td></tr>
+    <tr><td><strong>Cor real</strong></td><td>Cor do fio físico a usar na montagem</td><td>10 opções: vermelho, preto, azul, amarelo, verde, branco, laranja, castanho, roxo, cinzento</td></tr>
+    <tr><td><strong>Comprimento</strong></td><td>Comprimento estimado do cabo em cm</td><td>1–500 cm</td></tr>
+    <tr><td><strong>Tensão</strong></td><td>Tensão esperada neste fio</td><td>0–240V (tipicamente 3.3V ou 5V)</td></tr>
+    <tr><td><strong>Corrente</strong></td><td>Corrente esperada neste fio</td><td>0–50000 mA</td></tr>
+  </table>
+
+  <p>Estes valores são <strong>guardados em cada fio individual</strong> e aparecem na tabela de ligações impressa. As propriedades definidas antes de criar o fio aplicam-se a todos os fios subsequentes até serem alteradas.</p>
+
+  <h3>Tabela AWG de referência</h3>
+  <table>
+    <tr><th>AWG</th><th>Ø (mm)</th><th>mm²</th><th>Amp. máx.</th><th>Ω/m</th><th>Uso típico</th></tr>
+    <tr><td>30</td><td>0.255</td><td>0.051</td><td>0.86A</td><td>0.339</td><td>Wire-wrapping, ligações curtas de sinal</td></tr>
+    <tr><td>28</td><td>0.321</td><td>0.081</td><td>1.4A</td><td>0.213</td><td>Ribbon cable, ligações internas</td></tr>
+    <tr><td>26</td><td>0.405</td><td>0.129</td><td>2.2A</td><td>0.134</td><td>Fio de prototipagem standard</td></tr>
+    <tr><td>24</td><td>0.511</td><td>0.205</td><td>3.5A</td><td>0.084</td><td>Ligações de alimentação leve</td></tr>
+    <tr><td>22</td><td>0.644</td><td>0.326</td><td>7.0A</td><td>0.053</td><td>Fio standard para prototipagem (padrão)</td></tr>
+    <tr><td>20</td><td>0.812</td><td>0.518</td><td>11A</td><td>0.033</td><td>Alimentação de sensores, LEDs múltiplos</td></tr>
+    <tr><td>18</td><td>1.024</td><td>0.823</td><td>16A</td><td>0.021</td><td>Motores, relés, alimentação principal</td></tr>
+    <tr><td>16</td><td>1.291</td><td>1.31</td><td>22A</td><td>0.013</td><td>Alimentação de potência</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 Regra prática</div>
+    Para a maioria dos projetos de prototipagem em eletrónica de baixa potência (sensores, LEDs, MCU), <strong>AWG 22</strong> é o standard. Para alimentação de motores e relés, usar <strong>AWG 18–16</strong>. Para sinais digitais curtos, <strong>AWG 26–28</strong> é suficiente.
+  </div>
+</section>
+
+<!-- ───────── 7 ───────── -->
+<section id="s7">
+  <h2><span class="sec-num">7</span> Validação e Avisos</h2>
+
+  <p>O sistema valida automaticamente cada fio com base nas propriedades elétricas definidas e gera avisos quando deteta potenciais problemas. Todos os avisos são <strong>informativos e não-bloqueantes</strong> — informam mas permitem continuar.</p>
+
+  <h3>Tipos de validação</h3>
+  <table>
+    <tr><th>Verificação</th><th>Condição</th><th>Aviso</th></tr>
+    <tr><td>Capacidade de corrente</td><td>Corrente > 100% da capacidade AWG</td><td>🔴 Vermelho — usar cabo mais grosso</td></tr>
+    <tr><td>Margem de corrente</td><td>Corrente entre 80–100% da capacidade</td><td>🟡 Amarelo — margem reduzida</td></tr>
+    <tr><td>Queda de tensão</td><td>V<sub>drop</sub> > 10% da tensão nominal</td><td>🔴 Vermelho — encurtar cabo ou usar AWG menor</td></tr>
+    <tr><td>Queda de tensão</td><td>V<sub>drop</sub> entre 5–10%</td><td>🟡 Amarelo — aceitável mas monitorar</td></tr>
+  </table>
+
+  <h3>Como funciona a queda de tensão</h3>
+  <p>A queda de tensão é calculada pela fórmula <code>V<sub>drop</sub> = I × R/m × L × 2</code> (ida e volta). Por exemplo: um fio AWG 22 (0.053 Ω/m) com 50cm de comprimento a 500mA tem uma queda de <code>0.5A × 0.053 × 0.5m × 2 = 0.027V</code> (0.5% de 5V — perfeitamente aceitável). Mas o mesmo fio a 5A teria uma queda de <code>0.27V</code> (5.3% — aviso amarelo).</p>
+
+  <h3>Painel de avisos</h3>
+  <p>O painel <strong>"⚠️ AVISOS"</strong> aparece automaticamente na sidebar quando existem alertas. Mostra o número total de avisos e lista cada um com cor de severidade (vermelho, amarelo, azul). Cada aviso indica o cabo afetado e os componentes envolvidos.</p>
+
+  <div class="card warning">
+    <div class="card-title">⚠️ Avisos na impressão</div>
+    Ao imprimir o esquema, todos os avisos e recomendações aparecem numa secção dedicada <strong>"Avisos e Recomendações"</strong> antes das notas. Isto permite que o professor ou o aluno verifiquem os pontos de atenção antes de montar.
+  </div>
+</section>
+
+<!-- ───────── 8 ───────── -->
+<section id="s8">
+  <h2><span class="sec-num">8</span> Recomendações Automáticas</h2>
+
+  <p>Além da validação elétrica dos cabos, o sistema analisa os componentes do esquema e gera <strong>recomendações de boas práticas</strong> baseadas no tipo de componente e na forma como está ligado.</p>
+
+  <h3>Recomendações por componente</h3>
+  <table>
+    <tr><th>Componente / Situação</th><th>Recomendação</th></tr>
+    <tr><td>Barramento I2C (SDA/SCL)</td><td>Verificar resistências pull-up 4.7kΩ no SDA e SCL</td></tr>
+    <tr><td>Sensores (BME280, DHT22, MPU-6050...)</td><td>Condensador 100nF entre VCC e GND junto ao sensor</td></tr>
+    <tr><td>Sensor capacitivo do solo</td><td>Cabo curto (<30cm), par entrançado, evitar fontes de ruído</td></tr>
+    <tr><td>Relé, motor, solenóide</td><td>Díodo flyback (1N4007) em paralelo inverso. Alimentação separada.</td></tr>
+    <tr><td>Servo motor</td><td>Alimentação separada (não pelo pino 5V). Condensador 100µF.</td></tr>
+    <tr><td>Motor DC / stepper</td><td>Alimentação separada obrigatória. GND comum com MCU.</td></tr>
+    <tr><td>LED</td><td>Resistência em série (220Ω–1kΩ para 5V, 100Ω–470Ω para 3.3V)</td></tr>
+    <tr><td>I2C com cabo >100cm</td><td>Limite prático ~100cm. Considerar I2C extender ou RS-485.</td></tr>
+    <tr><td>Sinal analógico com cabo >50cm</td><td>Usar cabo blindado ou par entrançado</td></tr>
+    <tr><td>SPI com cabo >20cm</td><td>Manter cabos SPI curtos. Reduzir clock se necessário.</td></tr>
+    <tr><td>MCU (Arduino, ESP, STM32...)</td><td>Condensador 100nF junto a cada IC. Condensador 100µF na alimentação.</td></tr>
+  </table>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Recomendações vs obrigações</div>
+    Todas as recomendações são sugestões baseadas em boas práticas de eletrónica. Nem todas se aplicam a todos os cenários — por exemplo, muitos módulos I2C já incluem pull-ups internos. O objetivo é alertar para potenciais problemas, não substituir o julgamento do projetista.
+  </div>
+
+  <div class="card purple">
+    <div class="card-title">🎓 Valor pedagógico</div>
+    As recomendações servem como ferramenta de ensino — o aluno aprende por que precisa de um díodo flyback num relé, ou por que o I2C tem limite de distância, no momento exato em que está a projetar o circuito. É aprendizagem contextual.
+  </div>
+</section>
+
+<!-- ───────── 9 ───────── -->
+<section id="s9">
+  <h2><span class="sec-num">9</span> Modos de Visualização</h2>
+
+  <p>O programa oferece dois modos para visualizar as ligações entre componentes. Pode alternar a qualquer momento sem perder dados.</p>
+
+  <h3>━ Modo Linhas</h3>
+  <p>As ligações são representadas por <strong>curvas Bezier coloridas</strong> entre os pinos, com o nome do cabo sobre a linha. É o modo ideal para circuitos simples com poucas ligações — mostra visualmente o percurso de cada fio.</p>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Quando usar Linhas</div>
+    Circuitos com até ~15–20 ligações. Com mais ligações, as curvas começam a sobrepor-se e o esquema fica difícil de ler.
+  </div>
+
+  <h3>🏷 Modo Tags</h3>
+  <p>As linhas desaparecem e em cada pino conectado aparece uma <strong>etiqueta colorida</strong> no formato <code>CABO→Destino</code> (ex: <code>SDA→OLED</code>). Para saber onde um pino liga, basta ler a etiqueta — mostra o nome do cabo e o componente de destino diretamente, sem precisar de procurar.</p>
+
+  <p>Este modo é ideal para circuitos complexos — o esquema fica limpo e legível independentemente do número de ligações. É também o modo que melhor se traduz para a tabela de ligações impressa.</p>
+
+  <div class="card purple">
+    <div class="card-title">🏷 Exemplo de leitura em modo Tags</div>
+    <p style="font-size:0.88rem;margin:0">Se o pino SDA do Arduino tem a tag verde <code>SDA</code>, e o pino SDA do OLED também tem a tag verde <code>SDA</code>, sabemos que estão ligados pelo cabo "SDA" (fio verde).</p>
+  </div>
+</section>
+
+<!-- ───────── 7 ───────── -->
+<section id="s10">
+  <h2><span class="sec-num">10</span> Edição e Navegação</h2>
+
+  <h3>Selecionar e mover</h3>
+  <p>Com a ferramenta <strong>▹ Selecionar</strong> ativa, clicar num componente seleciona-o (contorno branco brilhante). Arrastar move-o (o undo só é criado se houver movimento real). O painel "SELECIONADO" na sidebar mostra nome, categoria, pinos, ligações e lista de fios com AWG.</p>
+
+  <h3>Renomear componente (duplo-clique)</h3>
+  <p>Fazer <strong>duplo-clique</strong> num componente na ferramenta Selecionar abre um campo de edição inline sobre o header. Permite alterar o nome (ex: mudar "Arduino UNO" para "Arduino UNO #2"). Premir <span class="kbd">Enter</span> para confirmar ou <span class="kbd">Escape</span> para cancelar.</p>
+
+  <h3>Editar pinos de componentes colocados</h3>
+  <p>Com um componente selecionado, o botão <strong>"✏️ Editar pinos"</strong> na sidebar abre um modal onde se pode <strong>adicionar, remover, renomear e mudar o tipo</strong> de cada pino — tanto esquerdos como direitos. Isto permite personalizar componentes da biblioteca após colocação, sem necessidade de criar um componente custom.</p>
+
+  <h3>Apagar</h3>
+  <p>Três formas de apagar:</p>
+  <table>
+    <tr><th>Método</th><th>O que apaga</th></tr>
+    <tr><td>Ferramenta <strong>⌫ Borracha</strong> + clicar num pino</td><td>Apaga o fio ligado a esse pino</td></tr>
+    <tr><td>Ferramenta <strong>⌫ Borracha</strong> + clicar no corpo</td><td>Apaga o componente e todos os seus fios</td></tr>
+    <tr><td>Selecionar + tecla <span class="kbd">Delete</span></td><td>Apaga o componente selecionado e todos os seus fios</td></tr>
+    <tr><td>Botão <strong>"✕ Apagar seleção"</strong></td><td>Mesmo que Delete</td></tr>
+    <tr><td>Botão <strong>"⟳ Limpar tudo"</strong></td><td>Apaga tudo (pede confirmação)</td></tr>
+  </table>
+
+  <h3>Navegação no canvas</h3>
+  <table>
+    <tr><th>Ação</th><th>Como fazer</th></tr>
+    <tr><td>Zoom in/out</td><td>Scroll do rato (↑ zoom in, ↓ zoom out)</td></tr>
+    <tr><td>Pinch zoom</td><td>2 dedos em tablets e touchscreens</td></tr>
+    <tr><td>Zoom botões</td><td>Botões +/− no canto superior direito</td></tr>
+    <tr><td>Ajustar (zoom-to-fit)</td><td>Botão "Ajustar" — calcula bounding box e centra todos os componentes</td></tr>
+    <tr><td>Reset vista</td><td>Botão "Reset" — zoom 100%, posição (0,0)</td></tr>
+    <tr><td>Pan (mover vista)</td><td>Arrastar uma área vazia do canvas (botão esquerdo)</td></tr>
+    <tr><td>Pan (botão do meio)</td><td>Clicar e arrastar com o botão do meio do rato</td></tr>
+    <tr><td>Touch (tablet)</td><td>1 dedo = arrastar componente ou pan · 2 dedos = pinch zoom</td></tr>
+  </table>
+
+  <h3>Desfazer e refazer</h3>
+  <p>Toda a ação é reversível. <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> desfaz, <span class="kbd">Ctrl</span>+<span class="kbd">Y</span> refaz. O histórico guarda até 40 passos. Há também botões na sidebar.</p>
+</section>
+
+<!-- ───────── 8 ───────── -->
+<section id="s11">
+  <h2><span class="sec-num">11</span> Guardar e Abrir Projetos</h2>
+
+  <h3>Guardar no browser (localStorage)</h3>
+  <div class="steps">
+    <div class="step">Clicar no botão <strong>💾</strong> (guardar rápido) — guarda com o nome atual</div>
+    <div class="step">Ou clicar <strong>"Guardar como"</strong> para definir/alterar o nome antes de guardar</div>
+  </div>
+
+  <h3>Auto-save</h3>
+  <p>O programa guarda automaticamente a cada <strong>60 segundos</strong> se houver alterações. O auto-save aparece na lista de projetos como "(auto) NomeDoProjeto". Se o browser fechar acidentalmente, o trabalho mais recente estará lá.</p>
+
+  <h3>Abrir projeto guardado</h3>
+  <p>Clicar <strong>"📂 Abrir"</strong> mostra a lista de projetos guardados, com nome, número de componentes/ligações e data. Clicar num projeto abre-o. O botão 🗑 permite apagar projetos (pede confirmação).</p>
+
+  <h3>Exportar / importar ficheiro</h3>
+  <table>
+    <tr><th>Ação</th><th>Botão</th><th>Resultado</th></tr>
+    <tr><td>Exportar</td><td>📥 Ficheiro</td><td>Descarrega um ficheiro <code>.schema.json</code> com tudo (componentes, ligações, custom)</td></tr>
+    <tr><td>Importar</td><td>📤 Abrir fich.</td><td>Abre um ficheiro <code>.schema.json</code> previamente exportado</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 Partilhar projetos</div>
+    Para partilhar um esquema com colegas ou com o professor, usar a função de exportar ficheiro. O ficheiro JSON inclui todos os componentes personalizados — o colega não precisa de os ter criado no seu computador.
+  </div>
+</section>
+
+<!-- ───────── 9 ───────── -->
+<section id="s12">
+  <h2><span class="sec-num">12</span> Imprimir e Exportar</h2>
+
+  <h3>Imprimir esquema</h3>
+  <p>Clicar <strong>"🖨️ Imprimir esquema"</strong> abre uma nova janela com o esquema formatado para impressão A4 paisagem. O documento inclui:</p>
+  <table>
+    <tr><th>Secção</th><th>Conteúdo</th></tr>
+    <tr><td>Cabeçalho</td><td>Nome do projeto, data, número de componentes e ligações</td></tr>
+    <tr><td>Diagrama SVG</td><td>Esquema visual com componentes, pinos e fios</td></tr>
+    <tr><td>Tabela de ligações</td><td>Cada fio: número, nome do cabo, origem (componente + pino), destino (componente + pino), cor, AWG (mm²), cor real do fio, comprimento</td></tr>
+    <tr><td>Lista de material (BOM)</td><td>Componentes agrupados por categoria</td></tr>
+    <tr><td>Avisos e Recomendações</td><td>Alertas de validação elétrica (AWG, queda de tensão) e recomendações por componente (pull-ups, díodos, condensadores)</td></tr>
+    <tr><td>Notas</td><td>Espaço para anotações manuscritas</td></tr>
+  </table>
+
+  <h3>Outras exportações</h3>
+  <table>
+    <tr><th>Formato</th><th>Botão</th><th>Uso</th></tr>
+    <tr><td>HTML</td><td>↓ HTML</td><td>Documento de impressão como ficheiro autónomo</td></tr>
+    <tr><td>SVG</td><td>↓ SVG</td><td>Imagem vetorial do esquema (editável em Inkscape, Figma)</td></tr>
+    <tr><td>PNG</td><td>↓ PNG</td><td>Imagem raster a 2× resolução (abre em qualquer dispositivo)</td></tr>
+  </table>
+
+  <p>O botão <strong>"↓ HTML"</strong> descarrega o documento de impressão como ficheiro HTML — pode ser aberto em qualquer computador sem necessidade do programa. Útil para entregar ao professor ou anexar ao relatório da PAP.</p>
+</section>
+
+<!-- ───────── 10 ───────── -->
+<section id="s13">
+  <h2><span class="sec-num">13</span> Atalhos de Teclado</h2>
+
+  <table>
+    <tr><th>Atalho</th><th>Ação</th></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Z</span></td><td>Desfazer</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Y</span> ou <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">Z</span></td><td>Refazer</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Guardar projeto</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">P</span></td><td>Imprimir esquema</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">D</span></td><td>Duplicar componente selecionado (com offset +30px)</td></tr>
+    <tr><td><span class="kbd">Delete</span> ou <span class="kbd">Backspace</span></td><td>Apagar componente selecionado e respetivos fios</td></tr>
+    <tr><td><span class="kbd">Escape</span></td><td>Cancelar ligação em curso / desselecionar / fechar modal</td></tr>
+  </table>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Nota sobre inputs</div>
+    Quando o cursor está num campo de texto (nome do projeto, nome do cabo, etc.), os atalhos de teclado são automaticamente desativados para não interferir com a escrita. Apenas <span class="kbd">Escape</span> funciona (para sair do campo).
+  </div>
+</section>
+
+<!-- ───────── 11 ───────── -->
+<section id="s14">
+  <h2><span class="sec-num">14</span> Biblioteca de MCUs</h2>
+
+  <p>O programa inclui 10 microcontroladores e placas de desenvolvimento pré-configurados com pinagem real:</p>
+
+  <table>
+    <tr><th>MCU</th><th>Categoria</th><th>Pinos</th><th>Notas</th></tr>
+    <tr><td>Arduino Nano</td><td>Arduino</td><td>16L + 16R</td><td>Inclui D0–D13, A0–A7, I2C em A4/A5</td></tr>
+    <tr><td>Arduino UNO</td><td>Arduino</td><td>14L + 14R</td><td>D0–D13, A0–A5, I2C em A4/A5</td></tr>
+    <tr><td>Arduino Mega</td><td>Arduino</td><td>27L + 27R</td><td>D0–D26, A0–A15, múltiplos UART</td></tr>
+    <tr><td>ESP32 DevKit</td><td>ESP</td><td>15L + 15R</td><td>WiFi+BLE, I2C em D21/D22, ADC, DAC</td></tr>
+    <tr><td>ESP8266 NodeMCU</td><td>ESP</td><td>11L + 11R</td><td>WiFi, I2C em D1/D2, 1 ADC</td></tr>
+    <tr><td>STM32 Blue Pill</td><td>STM32</td><td>14L + 14R</td><td>ARM Cortex-M3, I2C em PB6/PB7</td></tr>
+    <tr><td>ATtiny85</td><td>AVR</td><td>4L + 4R</td><td>8 pinos, I2C em PB0/PB2</td></tr>
+    <tr><td>Raspberry Pi Pico</td><td>RPi</td><td>20L + 20R</td><td>RP2040, 26 GPIO, 3 ADC</td></tr>
+    <tr><td>PLC Genérico</td><td>PLC</td><td>9L + 9R</td><td>8 inputs, 6 outputs, 24V</td></tr>
+    <tr><td>FPGA Genérica</td><td>FPGA</td><td>12L + 12R</td><td>16 I/O, CLK, RST, JTAG</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 MCU não listado?</div>
+    Use o botão "✚ Criar MCU / Placa" para definir a pinagem de qualquer microcontrolador ou placa: XIAO, Teensy, STM32 Nucleo, Wemos D1, etc. Consulte o datasheet para os nomes corretos dos pinos.
+  </div>
+</section>
+
+<!-- ───────── 12 ───────── -->
+<section id="s15">
+  <h2><span class="sec-num">15</span> Biblioteca de Componentes</h2>
+
+  <p>23 componentes pré-configurados organizados por categoria:</p>
+
+  <div class="grid-2">
+    <div class="card" style="padding:12px 14px">
+      <div class="card-title" style="color:var(--green)">📡 Sensores</div>
+      <p style="font-size:0.85rem;margin:0">DHT22 (temp/hum), HC-SR04 (ultrassónico), BME280 (temp/hum/pressão I2C), MPU-6050 (acelerómetro I2C), MAX30102 (pulso/SpO2 I2C), PN532 (NFC/RFID)</p>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="card-title" style="color:var(--accent)">🖥️ Displays</div>
+      <p style="font-size:0.85rem;margin:0">OLED 128×64 I2C (SSD1306/SH1106), LCD 16×2 I2C (PCF8574)</p>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="card-title" style="color:var(--amber)">⚡ Atuadores</div>
+      <p style="font-size:0.85rem;margin:0">Módulo Relé 1CH, Servo Motor, Motor DC (via driver), A4988 Stepper Driver, Buzzer, LED RGB</p>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="card-title" style="color:var(--muted)">🎛️ Interface</div>
+      <p style="font-size:0.85rem;margin:0">Teclado 4×4 (matricial), Teclado I2C (PCF8574), Botão (pull-down), Potenciómetro 10K</p>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="card-title" style="color:var(--purple)">📡 Comunicação</div>
+      <p style="font-size:0.85rem;margin:0">NRF24L01 (rádio SPI), HC-05 Bluetooth (UART), Módulo SD Card (SPI)</p>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="card-title" style="color:var(--red)">🔋 Alimentação</div>
+      <p style="font-size:0.85rem;margin:0">Fonte de Alimentação (V+/GND), Regulador 7805 (IN/GND/OUT)</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── 13 ───────── -->
+<section id="s16">
+  <h2><span class="sec-num">16</span> Exemplo Prático Passo a Passo</h2>
+
+  <p>Vamos criar o esquema de um sistema de monitorização ambiental com Arduino UNO, sensor BME280 (I2C), OLED (I2C) e buzzer de alarme.</p>
+
+  <div class="steps">
+    <div class="step">Clicar em <strong>"+ Adicionar da biblioteca"</strong> e selecionar <strong>Arduino UNO</strong> da categoria Arduino</div>
+    <div class="step">Repetir para adicionar <strong>BME280 I2C</strong> (Sensores), <strong>OLED 128×64 I2C</strong> (Displays) e <strong>Buzzer</strong> (Atuadores)</div>
+    <div class="step"><strong>Arrastar</strong> os componentes para posições lógicas: Arduino à esquerda, sensores ao centro, display à direita</div>
+    <div class="step">Selecionar a ferramenta <strong>⚡ Ligar pinos</strong></div>
+    <div class="step">Clicar no preset <strong>VCC</strong> (vermelho). Ligar o pino <code>5V</code> do Arduino ao pino <code>VCC</code> do BME280. Repetir para o <code>VCC</code> do OLED e o <code>VCC</code> do Buzzer.</div>
+    <div class="step">Clicar no preset <strong>GND</strong> (azul). Ligar <code>GND</code> do Arduino ao <code>GND</code> de cada componente (3 ligações).</div>
+    <div class="step">Clicar no preset <strong>SDA</strong> (verde). Ligar <code>A4/SDA</code> do Arduino ao <code>SDA</code> do BME280, depois ao <code>SDA</code> do OLED.</div>
+    <div class="step">Clicar no preset <strong>SCL</strong> (amarelo). Ligar <code>A5/SCL</code> do Arduino ao <code>SCL</code> do BME280, depois ao <code>SCL</code> do OLED.</div>
+    <div class="step">Escrever <strong>"BUZZER"</strong> no campo de nome, selecionar uma cor laranja. Ligar <code>D8</code> do Arduino ao pino <code>VCC</code> do Buzzer (que é na verdade o pino de sinal).</div>
+    <div class="step">Alternar entre <strong>Linhas</strong> e <strong>Tags</strong> para ver qual modo fica mais legível com este número de ligações.</div>
+    <div class="step">Clicar <strong>"🖨️ Imprimir esquema"</strong> para gerar o documento A4 com a tabela de ligações completa.</div>
+  </div>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ I2C: dois componentes no mesmo barramento</div>
+    O BME280 e o OLED usam ambos I2C — partilham os mesmos fios SDA e SCL. Cada um tem um endereço diferente (BME280: 0x76/0x77, OLED: 0x3C/0x3D). No esquema, é possível ligar ambos ao mesmo pino do Arduino, ou criar dois fios separados SDA→BME e SDA→OLED — ambos são corretos.
+  </div>
+</section>
+
+</div>
+
+<div class="footer">
+  <p><strong>Manual — Esquemas de Ligação v1.2</strong></p>
+  <p>ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso Profissional EAC · Prof. Avelino A. Colaço</p>
+  <p style="margin-top:6px"><a href="Nexus_ESECCinfaesCTE_Esquemas.html">Abrir Esquemas de Ligação</a> · <a href="Nexus_ESECCinfaesCTE_Perfboard.html">Abrir Perfboard Designer</a> · <a href="index.html">Voltar ao Nexus</a></p>
+</div>
+
+</body>
+</html>

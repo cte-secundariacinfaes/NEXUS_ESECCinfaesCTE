@@ -1,0 +1,3410 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Esquemas de Ligação — Diagrama de Cablagem</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%233b82f6'/><text x='16' y='22' text-anchor='middle' font-size='16' fill='%23fff'>🔌</text></svg>">
+<style>*{box-sizing:border-box;margin:0;padding:0}html,body,#root{height:100%;width:100%;overflow:hidden}body{background:#0c0c14}</style>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+</head><body><div id="root"></div><script>
+const {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo
+} = React;
+
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════
+const WIRE_COLORS = [{
+  id: "vcc",
+  color: "#e74c3c",
+  label: "VCC"
+}, {
+  id: "gnd",
+  color: "#3498db",
+  label: "GND"
+}, {
+  id: "sda",
+  color: "#2ecc71",
+  label: "SDA"
+}, {
+  id: "scl",
+  color: "#f39c12",
+  label: "SCL"
+}, {
+  id: "tx",
+  color: "#9b59b6",
+  label: "TX"
+}, {
+  id: "rx",
+  color: "#1abc9c",
+  label: "RX"
+}, {
+  id: "mosi",
+  color: "#e67e22",
+  label: "MOSI"
+}, {
+  id: "miso",
+  color: "#34495e",
+  label: "MISO"
+}, {
+  id: "sck",
+  color: "#e91e63",
+  label: "SCK"
+}, {
+  id: "cs",
+  color: "#00bcd4",
+  label: "CS"
+}, {
+  id: "sig1",
+  color: "#ff9800",
+  label: "SIG"
+}, {
+  id: "sig2",
+  color: "#795548",
+  label: "SIG2"
+}, {
+  id: "sig3",
+  color: "#607d8b",
+  label: "SIG3"
+}, {
+  id: "sig4",
+  color: "#8bc34a",
+  label: "SIG4"
+}];
+const PIN_TYPES = [{
+  id: "digital",
+  label: "Digital",
+  color: "#3498db"
+}, {
+  id: "analog",
+  label: "Analógico",
+  color: "#e67e22"
+}, {
+  id: "power",
+  label: "Alimentação",
+  color: "#e74c3c"
+}, {
+  id: "gnd",
+  label: "GND",
+  color: "#34495e"
+}, {
+  id: "i2c",
+  label: "I2C",
+  color: "#2ecc71"
+}, {
+  id: "spi",
+  label: "SPI",
+  color: "#9b59b6"
+}, {
+  id: "uart",
+  label: "UART",
+  color: "#1abc9c"
+}, {
+  id: "pwm",
+  label: "PWM",
+  color: "#f39c12"
+}, {
+  id: "other",
+  label: "Outro",
+  color: "#95a5a6"
+}];
+
+// ─── MCU Library ───
+const MCU_LIBRARY = [{
+  id: "nano",
+  name: "Arduino Nano",
+  cat: "Arduino",
+  color: "#00607a",
+  pinsL: ["D1/TX", "D0/RX", "RST", "GND", "D2", "D3~", "D4", "D5~", "D6~", "D7", "D8", "D9~", "D10~", "D11~", "D12", "D13"],
+  pinsR: ["VIN", "GND", "RST", "5V", "A7", "A6", "A5/SCL", "A4/SDA", "A3", "A2", "A1", "A0", "AREF", "3V3", "D13", "—"],
+  pinsLTypes: ["uart", "uart", "other", "gnd", "digital", "pwm", "digital", "pwm", "pwm", "digital", "digital", "pwm", "pwm", "pwm", "digital", "digital"],
+  pinsRTypes: ["power", "gnd", "other", "power", "analog", "analog", "i2c", "i2c", "analog", "analog", "analog", "analog", "other", "power", "digital", "other"]
+}, {
+  id: "uno",
+  name: "Arduino UNO",
+  cat: "Arduino",
+  color: "#006d77",
+  pinsL: ["D0/RX", "D1/TX", "D2", "D3~", "D4", "D5~", "D6~", "D7", "D8", "D9~", "D10~", "D11~", "D12", "D13"],
+  pinsR: ["A0", "A1", "A2", "A3", "A4/SDA", "A5/SCL", "VIN", "GND", "GND", "5V", "3V3", "RST", "IOREF", "—"],
+  pinsLTypes: ["uart", "uart", "digital", "pwm", "digital", "pwm", "pwm", "digital", "digital", "pwm", "pwm", "pwm", "digital", "digital"],
+  pinsRTypes: ["analog", "analog", "analog", "analog", "i2c", "i2c", "power", "gnd", "gnd", "power", "power", "other", "other", "other"]
+}, {
+  id: "mega",
+  name: "Arduino Mega",
+  cat: "Arduino",
+  color: "#004d40",
+  pinsL: Array.from({
+    length: 27
+  }, (_, i) => `D${i}`),
+  pinsR: [...Array.from({
+    length: 16
+  }, (_, i) => `A${i}`), "5V", "3V3", "GND", "VIN", "RST", "AREF", "SDA", "SCL", "TX1", "RX1", "TX2"],
+  pinsLTypes: Array.from({
+    length: 27
+  }, () => "digital"),
+  pinsRTypes: [...Array.from({
+    length: 16
+  }, () => "analog"), "power", "power", "gnd", "power", "other", "other", "i2c", "i2c", "uart", "uart", "uart"]
+}, {
+  id: "esp32",
+  name: "ESP32 DevKit",
+  cat: "ESP",
+  color: "#880000",
+  pinsL: ["3V3", "GND", "D15", "D2", "D4", "D16/RX2", "D17/TX2", "D5", "D18", "D19", "D21/SDA", "D3/RX0", "D1/TX0", "D22/SCL", "D23"],
+  pinsR: ["VIN", "GND", "D13", "D12", "D14", "D27", "D26", "D25", "D33", "D32", "D35", "D34", "VN", "VP", "EN"],
+  pinsLTypes: ["power", "gnd", "digital", "digital", "digital", "uart", "uart", "digital", "spi", "spi", "i2c", "uart", "uart", "i2c", "spi"],
+  pinsRTypes: ["power", "gnd", "digital", "digital", "digital", "digital", "digital", "digital", "analog", "analog", "analog", "analog", "analog", "analog", "other"]
+}, {
+  id: "esp8266",
+  name: "ESP8266 NodeMCU",
+  cat: "ESP",
+  color: "#aa4400",
+  pinsL: ["3V3", "GND", "D0", "D1/SCL", "D2/SDA", "D3", "D4", "D5", "D6", "D7", "D8"],
+  pinsR: ["VIN", "GND", "RST", "A0", "SD3", "SD2", "SD1", "CMD", "CLK", "EN", "—"],
+  pinsLTypes: ["power", "gnd", "digital", "i2c", "i2c", "digital", "digital", "digital", "digital", "digital", "digital"],
+  pinsRTypes: ["power", "gnd", "other", "analog", "digital", "digital", "digital", "digital", "digital", "other", "other"]
+}, {
+  id: "stm32",
+  name: "STM32 Blue Pill",
+  cat: "STM32",
+  color: "#1a237e",
+  pinsL: ["3V3", "GND", "PA0", "PA1", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7", "PB0", "PB1", "PB10", "PB11"],
+  pinsR: ["5V", "GND", "PA8", "PA9/TX", "PA10/RX", "PA11", "PA12", "PA15", "PB3", "PB4", "PB5", "PB6/SCL", "PB7/SDA", "PB8"],
+  pinsLTypes: ["power", "gnd", "analog", "analog", "analog", "analog", "analog", "spi", "spi", "spi", "analog", "analog", "i2c", "i2c"],
+  pinsRTypes: ["power", "gnd", "digital", "uart", "uart", "digital", "digital", "digital", "digital", "digital", "digital", "i2c", "i2c", "digital"]
+}, {
+  id: "attiny85",
+  name: "ATtiny85",
+  cat: "AVR",
+  color: "#333",
+  pinsL: ["PB5/RST", "PB3/A3", "PB4/A2", "GND"],
+  pinsR: ["VCC", "PB2/SCL", "PB1/PWM", "PB0/SDA"],
+  pinsLTypes: ["other", "analog", "analog", "gnd"],
+  pinsRTypes: ["power", "i2c", "pwm", "i2c"]
+}, {
+  id: "rpi_pico",
+  name: "Raspberry Pi Pico",
+  cat: "RPi",
+  color: "#c51a4a",
+  pinsL: ["GP0", "GP1", "GND", "GP2", "GP3", "GP4", "GP5", "GND", "GP6", "GP7", "GP8", "GP9", "GND", "GP10", "GP11", "GP12", "GP13", "GND", "GP14", "GP15"],
+  pinsR: ["VBUS", "VSYS", "GND", "3V3_EN", "3V3", "ADC_VREF", "GP28/A2", "GND", "GP27/A1", "GP26/A0", "RUN", "GP22", "GND", "GP21", "GP20", "GP19", "GP18", "GND", "GP17", "GP16"],
+  pinsLTypes: Array.from({
+    length: 20
+  }, (_, i) => [2, 7, 12, 17].includes(i) ? "gnd" : "digital"),
+  pinsRTypes: ["power", "power", "gnd", "other", "power", "other", "analog", "gnd", "analog", "analog", "other", "digital", "gnd", "digital", "digital", "digital", "digital", "gnd", "digital", "digital"]
+}, {
+  id: "plc_gen",
+  name: "PLC Genérico",
+  cat: "PLC",
+  color: "#546e7a",
+  pinsL: ["I0.0", "I0.1", "I0.2", "I0.3", "I0.4", "I0.5", "I0.6", "I0.7", "COM"],
+  pinsR: ["Q0.0", "Q0.1", "Q0.2", "Q0.3", "Q0.4", "Q0.5", "COM", "24V", "0V"],
+  pinsLTypes: Array.from({
+    length: 9
+  }, () => "digital"),
+  pinsRTypes: [...Array.from({
+    length: 6
+  }, () => "digital"), "other", "power", "gnd"]
+}, {
+  id: "fpga_gen",
+  name: "FPGA Genérica",
+  cat: "FPGA",
+  color: "#4a148c",
+  pinsL: ["IO0", "IO1", "IO2", "IO3", "IO4", "IO5", "IO6", "IO7", "CLK", "RST", "GND", "VCC"],
+  pinsR: ["IO8", "IO9", "IO10", "IO11", "IO12", "IO13", "IO14", "IO15", "JTAG_TDI", "JTAG_TDO", "JTAG_TMS", "JTAG_TCK"],
+  pinsLTypes: [...Array.from({
+    length: 8
+  }, () => "digital"), "other", "other", "gnd", "power"],
+  pinsRTypes: [...Array.from({
+    length: 8
+  }, () => "digital"), ...Array.from({
+    length: 4
+  }, () => "other")]
+}];
+
+// ─── Component Library ───
+const COMP_LIBRARY = [{
+  id: "dht22",
+  name: "DHT22",
+  cat: "Sensores",
+  color: "#4caf50",
+  pinsL: ["VCC", "DATA", "NC", "GND"],
+  pinsLTypes: ["power", "digital", "other", "gnd"]
+}, {
+  id: "hcsr04",
+  name: "HC-SR04",
+  cat: "Sensores",
+  color: "#2196f3",
+  pinsL: ["VCC", "TRIG", "ECHO", "GND"],
+  pinsLTypes: ["power", "digital", "digital", "gnd"]
+}, {
+  id: "bme280",
+  name: "BME280 I2C",
+  cat: "Sensores",
+  color: "#9c27b0",
+  pinsL: ["VCC", "GND", "SCL", "SDA"],
+  pinsLTypes: ["power", "gnd", "i2c", "i2c"]
+}, {
+  id: "mpu6050",
+  name: "MPU-6050",
+  cat: "Sensores",
+  color: "#ff5722",
+  pinsL: ["VCC", "GND", "SCL", "SDA", "XDA", "XCL", "AD0", "INT"],
+  pinsLTypes: ["power", "gnd", "i2c", "i2c", "i2c", "i2c", "digital", "digital"]
+}, {
+  id: "max30102",
+  name: "MAX30102",
+  cat: "Sensores",
+  color: "#e91e63",
+  pinsL: ["VIN", "GND", "SCL", "SDA", "INT"],
+  pinsLTypes: ["power", "gnd", "i2c", "i2c", "digital"]
+}, {
+  id: "pn532",
+  name: "PN532 NFC",
+  cat: "Sensores",
+  color: "#795548",
+  pinsL: ["VCC", "GND", "SCL/RX", "SDA/TX", "IRQ", "RST"],
+  pinsLTypes: ["power", "gnd", "i2c", "i2c", "digital", "digital"]
+}, {
+  id: "keypad44",
+  name: "Teclado 4×4",
+  cat: "Interface",
+  color: "#607d8b",
+  pinsL: ["R1", "R2", "R3", "R4", "C1", "C2", "C3", "C4"],
+  pinsLTypes: Array.from({
+    length: 8
+  }, () => "digital")
+}, {
+  id: "keypad_i2c",
+  name: "Teclado I2C (PCF8574)",
+  cat: "Interface",
+  color: "#455a64",
+  pinsL: ["VCC", "GND", "SCL", "SDA"],
+  pinsLTypes: ["power", "gnd", "i2c", "i2c"]
+}, {
+  id: "oled_128x64",
+  name: "OLED 128×64 I2C",
+  cat: "Displays",
+  color: "#212121",
+  pinsL: ["GND", "VCC", "SCL", "SDA"],
+  pinsLTypes: ["gnd", "power", "i2c", "i2c"]
+}, {
+  id: "lcd1602",
+  name: "LCD 16×2 I2C",
+  cat: "Displays",
+  color: "#1b5e20",
+  pinsL: ["GND", "VCC", "SDA", "SCL"],
+  pinsLTypes: ["gnd", "power", "i2c", "i2c"]
+}, {
+  id: "relay_1ch",
+  name: "Módulo Relé 1CH",
+  cat: "Atuadores",
+  color: "#1565c0",
+  pinsL: ["VCC", "GND", "IN", "NO", "COM", "NC"],
+  pinsLTypes: ["power", "gnd", "digital", "other", "other", "other"]
+}, {
+  id: "servo",
+  name: "Servo Motor",
+  cat: "Atuadores",
+  color: "#ff6f00",
+  pinsL: ["GND", "VCC", "SIGNAL"],
+  pinsLTypes: ["gnd", "power", "pwm"]
+}, {
+  id: "motor_dc",
+  name: "Motor DC (via driver)",
+  cat: "Atuadores",
+  color: "#4e342e",
+  pinsL: ["IN1", "IN2", "ENA", "VCC", "GND", "OUT1", "OUT2"],
+  pinsLTypes: ["digital", "digital", "pwm", "power", "gnd", "other", "other"]
+}, {
+  id: "stepper_a4988",
+  name: "A4988 Stepper Driver",
+  cat: "Atuadores",
+  color: "#880e4f",
+  pinsL: ["VMOT", "GND", "2B", "2A", "1A", "1B", "VDD", "GND"],
+  pinsR: ["EN", "MS1", "MS2", "MS3", "RST", "SLP", "STEP", "DIR"],
+  pinsLTypes: ["power", "gnd", "other", "other", "other", "other", "power", "gnd"],
+  pinsRTypes: ["digital", "digital", "digital", "digital", "digital", "digital", "digital", "digital"]
+}, {
+  id: "buzzer",
+  name: "Buzzer",
+  cat: "Atuadores",
+  color: "#333",
+  pinsL: ["VCC", "GND"],
+  pinsLTypes: ["digital", "gnd"]
+}, {
+  id: "led_rgb",
+  name: "LED RGB",
+  cat: "Atuadores",
+  color: "#e040fb",
+  pinsL: ["R", "G", "B", "GND"],
+  pinsLTypes: ["pwm", "pwm", "pwm", "gnd"]
+}, {
+  id: "btn_pulldown",
+  name: "Botão (Pull-down)",
+  cat: "Interface",
+  color: "#78909c",
+  pinsL: ["SIGNAL", "GND"],
+  pinsLTypes: ["digital", "gnd"]
+}, {
+  id: "pot_10k",
+  name: "Potenciómetro 10K",
+  cat: "Interface",
+  color: "#5d4037",
+  pinsL: ["VCC", "WIPER", "GND"],
+  pinsLTypes: ["power", "analog", "gnd"]
+}, {
+  id: "sd_card",
+  name: "Módulo SD Card",
+  cat: "Armazenamento",
+  color: "#37474f",
+  pinsL: ["GND", "VCC", "MISO", "MOSI", "SCK", "CS"],
+  pinsLTypes: ["gnd", "power", "spi", "spi", "spi", "spi"]
+}, {
+  id: "nrf24",
+  name: "NRF24L01",
+  cat: "Comunicação",
+  color: "#006064",
+  pinsL: ["GND", "VCC", "CE", "CSN", "SCK", "MOSI", "MISO", "IRQ"],
+  pinsLTypes: ["gnd", "power", "digital", "digital", "spi", "spi", "spi", "digital"]
+}, {
+  id: "hc05",
+  name: "HC-05 Bluetooth",
+  cat: "Comunicação",
+  color: "#01579b",
+  pinsL: ["VCC", "GND", "TX", "RX", "STATE", "EN"],
+  pinsLTypes: ["power", "gnd", "uart", "uart", "digital", "digital"]
+}, {
+  id: "power_supply",
+  name: "Fonte de Alimentação",
+  cat: "Alimentação",
+  color: "#b71c1c",
+  pinsL: ["V+", "GND"],
+  pinsLTypes: ["power", "gnd"]
+}, {
+  id: "reg_7805",
+  name: "Regulador 7805",
+  cat: "Alimentação",
+  color: "#424242",
+  pinsL: ["IN", "GND", "OUT"],
+  pinsLTypes: ["power", "gnd", "power"]
+}];
+
+// ─── AWG Wire Table (capacity at 30°C, copper, chassis wiring) ───
+const AWG_TABLE = [{
+  awg: 30,
+  mm2: 0.051,
+  diam_mm: 0.255,
+  amps: 0.86,
+  ohm_per_m: 0.339
+}, {
+  awg: 28,
+  mm2: 0.081,
+  diam_mm: 0.321,
+  amps: 1.4,
+  ohm_per_m: 0.213
+}, {
+  awg: 26,
+  mm2: 0.129,
+  diam_mm: 0.405,
+  amps: 2.2,
+  ohm_per_m: 0.134
+}, {
+  awg: 24,
+  mm2: 0.205,
+  diam_mm: 0.511,
+  amps: 3.5,
+  ohm_per_m: 0.0842
+}, {
+  awg: 22,
+  mm2: 0.326,
+  diam_mm: 0.644,
+  amps: 7.0,
+  ohm_per_m: 0.0530
+}, {
+  awg: 20,
+  mm2: 0.518,
+  diam_mm: 0.812,
+  amps: 11,
+  ohm_per_m: 0.0333
+}, {
+  awg: 18,
+  mm2: 0.823,
+  diam_mm: 1.024,
+  amps: 16,
+  ohm_per_m: 0.0210
+}, {
+  awg: 16,
+  mm2: 1.31,
+  diam_mm: 1.291,
+  amps: 22,
+  ohm_per_m: 0.0132
+}, {
+  awg: 14,
+  mm2: 2.08,
+  diam_mm: 1.628,
+  amps: 32,
+  ohm_per_m: 0.00829
+}, {
+  awg: 12,
+  mm2: 3.31,
+  diam_mm: 2.053,
+  amps: 41,
+  ohm_per_m: 0.00521
+}];
+const REAL_WIRE_COLORS = [{
+  id: "red",
+  label: "Vermelho",
+  hex: "#e74c3c"
+}, {
+  id: "black",
+  label: "Preto",
+  hex: "#1a1a1a"
+}, {
+  id: "blue",
+  label: "Azul",
+  hex: "#2980b9"
+}, {
+  id: "yellow",
+  label: "Amarelo",
+  hex: "#f1c40f"
+}, {
+  id: "green",
+  label: "Verde",
+  hex: "#27ae60"
+}, {
+  id: "white",
+  label: "Branco",
+  hex: "#ecf0f1"
+}, {
+  id: "orange",
+  label: "Laranja",
+  hex: "#e67e22"
+}, {
+  id: "brown",
+  label: "Castanho",
+  hex: "#795548"
+}, {
+  id: "purple",
+  label: "Roxo",
+  hex: "#8e44ad"
+}, {
+  id: "grey",
+  label: "Cinzento",
+  hex: "#95a5a6"
+}];
+
+// ─── Auto-tag generator based on pin types ───
+const TAG_PRESETS = [{
+  match: ["power", "power"],
+  prefix: "PWR"
+}, {
+  match: ["gnd", "gnd"],
+  prefix: "GND"
+}, {
+  match: ["i2c", "i2c"],
+  prefix: "I2C"
+}, {
+  match: ["spi", "spi"],
+  prefix: "SPI"
+}, {
+  match: ["uart", "uart"],
+  prefix: "UART"
+}, {
+  match: ["pwm"],
+  prefix: "PWM"
+}, {
+  match: ["analog"],
+  prefix: "ADC"
+}, {
+  match: ["digital"],
+  prefix: "DIG"
+}];
+function generateTag(srcNode, srcSide, srcIdx, dstNode, dstSide, dstIdx) {
+  const srcPin = (srcSide === "L" ? srcNode.pinsL : srcNode.pinsR || [])[srcIdx] || "";
+  const dstPin = (dstSide === "L" ? dstNode.pinsL : dstNode.pinsR || [])[dstIdx] || "";
+  const srcType = (srcSide === "L" ? srcNode.pinsLTypes : srcNode.pinsRTypes || [])[srcIdx] || "digital";
+  const dstType = (dstSide === "L" ? dstNode.pinsLTypes : dstNode.pinsRTypes || [])[dstIdx] || "digital";
+  // Check known pin names first
+  const knownNames = ["VCC", "GND", "5V", "3V3", "3.3V", "VIN", "SDA", "SCL", "TX", "RX", "MOSI", "MISO", "SCK", "CS", "SS"];
+  for (const kn of knownNames) {
+    if (srcPin.toUpperCase().includes(kn)) return kn;
+    if (dstPin.toUpperCase().includes(kn)) return kn;
+  }
+  // Fallback to type-based prefix
+  for (const tp of TAG_PRESETS) {
+    if (tp.match.includes(srcType) || tp.match.includes(dstType)) {
+      const pinName = dstPin.replace(/[^a-zA-Z0-9]/g, "") || srcPin.replace(/[^a-zA-Z0-9]/g, "");
+      return tp.prefix + "_" + pinName;
+    }
+  }
+  return "SIG_" + (dstPin || srcPin).replace(/[^a-zA-Z0-9]/g, "").substring(0, 8);
+}
+
+// ─── Validation engine ───
+function validateWire(wire, awgEntry) {
+  const warnings = [];
+  if (!awgEntry || !wire.currentMA || !wire.voltageV) return warnings;
+  const currentA = wire.currentMA / 1000;
+  // Current capacity check
+  if (currentA > awgEntry.amps) {
+    warnings.push({
+      severity: "red",
+      msg: `Corrente ${wire.currentMA}mA excede capacidade do AWG${awgEntry.awg} (${awgEntry.amps * 1000}mA). Usar cabo mais grosso.`
+    });
+  } else if (currentA > awgEntry.amps * 0.8) {
+    warnings.push({
+      severity: "yellow",
+      msg: `Corrente ${wire.currentMA}mA está a ${Math.round(currentA / awgEntry.amps * 100)}% da capacidade do AWG${awgEntry.awg}. Margem reduzida.`
+    });
+  }
+  // Voltage drop check
+  if (wire.lengthCm && wire.voltageV) {
+    const lengthM = wire.lengthCm / 100;
+    const vDrop = currentA * awgEntry.ohm_per_m * lengthM * 2; // round-trip
+    const vDropPct = vDrop / wire.voltageV * 100;
+    if (vDropPct > 10) {
+      warnings.push({
+        severity: "red",
+        msg: `Queda de tensão: ${vDrop.toFixed(2)}V (${vDropPct.toFixed(1)}%). Sinal pode não funcionar. Encurtar cabo ou usar AWG menor.`
+      });
+    } else if (vDropPct > 5) {
+      warnings.push({
+        severity: "yellow",
+        msg: `Queda de tensão: ${vDrop.toFixed(2)}V (${vDropPct.toFixed(1)}%). Aceitável mas monitorar.`
+      });
+    }
+  }
+  return warnings;
+}
+
+// ─── Component recommendation engine ───
+function getRecommendations(nodes, wires) {
+  const recs = [];
+  const nodeMap = {};
+  nodes.forEach(n => {
+    nodeMap[n.id] = n;
+  });
+
+  // Check each node
+  nodes.forEach(n => {
+    const name = n.name.toLowerCase();
+    const allPinTypes = [...(n.pinsLTypes || []), ...(n.pinsRTypes || [])];
+    const connectedWires = wires.filter(w => w.srcNode === n.id || w.dstNode === n.id);
+    const hasI2C = allPinTypes.includes("i2c");
+    const hasSPI = allPinTypes.includes("spi");
+    const hasPower = allPinTypes.includes("power");
+
+    // I2C without pull-ups mentioned
+    if (hasI2C && connectedWires.some(w => w.label?.toUpperCase().includes("SDA") || w.label?.toUpperCase().includes("SCL"))) {
+      recs.push({
+        node: n.name,
+        severity: "info",
+        msg: "Barramento I2C: verificar resistências pull-up 4.7k\u03A9 no SDA e SCL (se não incluídas no módulo)."
+      });
+    }
+
+    // Sensors needing decoupling
+    if (name.includes("bme") || name.includes("dht") || name.includes("mpu") || name.includes("max301") || name.includes("aht") || name.includes("bmp") || name.includes("capacitivo") || name.includes("solo")) {
+      recs.push({
+        node: n.name,
+        severity: "info",
+        msg: "Recomenda-se condensador 100nF entre VCC e GND junto ao sensor para filtragem de ruído."
+      });
+    }
+
+    // Capacitive soil sensor specifics
+    if (name.includes("capacitivo") || name.includes("solo") || name.includes("soil")) {
+      recs.push({
+        node: n.name,
+        severity: "yellow",
+        msg: "Sensor capacitivo do solo: cabo curto (<30cm), par entrançado recomendado. Evitar passar junto a fontes de ruído."
+      });
+    }
+
+    // Relay / motor / solenoid
+    if (name.includes("rel") || name.includes("relay") || name.includes("motor") || name.includes("solen") || name.includes("bobina")) {
+      recs.push({
+        node: n.name,
+        severity: "yellow",
+        msg: "Carga indutiva: díodo flyback (1N4007) em paralelo inverso com a bobina. Alimentação separada recomendada."
+      });
+    }
+
+    // Servo
+    if (name.includes("servo")) {
+      recs.push({
+        node: n.name,
+        severity: "yellow",
+        msg: "Servo motor: alimentação separada recomendada (não pelo pino 5V do MCU). Condensador 100\u00B5F na alimentação do servo."
+      });
+    }
+
+    // Motor DC / stepper
+    if (name.includes("motor") || name.includes("stepper") || name.includes("nema") || name.includes("a4988") || name.includes("l298") || name.includes("l293")) {
+      recs.push({
+        node: n.name,
+        severity: "yellow",
+        msg: "Motor: alimentação separada obrigatória. GND comum com o MCU. Condensador 100\u00B5F junto ao driver."
+      });
+    }
+
+    // LED
+    if (name.includes("led") && !name.includes("oled")) {
+      recs.push({
+        node: n.name,
+        severity: "info",
+        msg: "LED: verificar resistência em série (220\u03A9\u20131k\u03A9 para 5V, 100\u03A9\u2013470\u03A9 para 3.3V)."
+      });
+    }
+
+    // Long I2C cables
+    connectedWires.forEach(w => {
+      if (w.lengthCm && w.lengthCm > 100 && (w.label?.toUpperCase().includes("SDA") || w.label?.toUpperCase().includes("SCL"))) {
+        recs.push({
+          node: n.name,
+          severity: "red",
+          msg: `I2C com cabo de ${w.lengthCm}cm: limite prático ~100cm. Considerar I2C extender, buffer (PCA9600) ou RS-485.`
+        });
+      }
+      if (w.lengthCm && w.lengthCm > 50 && allPinTypes.includes("analog")) {
+        recs.push({
+          node: n.name,
+          severity: "yellow",
+          msg: "Sinal analógico com cabo >50cm: usar cabo blindado ou par entrançado para reduzir ruído."
+        });
+      }
+    });
+
+    // SPI long cables
+    if (hasSPI) {
+      connectedWires.forEach(w => {
+        if (w.lengthCm && w.lengthCm > 20 && (w.label?.toUpperCase().includes("MOSI") || w.label?.toUpperCase().includes("SCK"))) {
+          recs.push({
+            node: n.name,
+            severity: "yellow",
+            msg: `SPI com cabo de ${w.lengthCm}cm: manter cabos SPI curtos (<20cm). Reduzir clock se necessário.`
+          });
+        }
+      });
+    }
+
+    // Power without decoupling (check if node is MCU-like)
+    if ((name.includes("arduino") || name.includes("esp") || name.includes("stm") || name.includes("pico") || name.includes("mega") || name.includes("nano") || name.includes("uno")) && hasPower) {
+      recs.push({
+        node: n.name,
+        severity: "info",
+        msg: "MCU: condensador 100nF entre VCC e GND junto a cada IC/módulo. Condensador 100\u00B5F na entrada de alimentação."
+      });
+    }
+  });
+
+  // Deduplicate
+  const seen = new Set();
+  return recs.filter(r => {
+    const key = r.node + r.msg;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STORAGE (same as Perfboard)
+// ═══════════════════════════════════════════════════════════════════
+const store = {
+  async get(k) {
+    try {
+      if (window.storage?.get) {
+        const r = await window.storage.get(k);
+        return r?.value || null;
+      }
+      return localStorage.getItem(k);
+    } catch (e) {
+      return null;
+    }
+  },
+  async set(k, v) {
+    try {
+      if (window.storage?.set) {
+        await window.storage.set(k, v);
+        return true;
+      }
+      localStorage.setItem(k, v);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+  async del(k) {
+    try {
+      if (window.storage?.delete) {
+        await window.storage.delete(k);
+        return true;
+      }
+      localStorage.removeItem(k);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+  async list(prefix) {
+    try {
+      if (window.storage?.list) {
+        const r = await window.storage.list(prefix);
+        return r?.keys || [];
+      }
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!prefix || k.startsWith(prefix)) keys.push(k);
+      }
+      return keys;
+    } catch (e) {
+      return [];
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+let _uid = 0;
+const uid = () => `n${Date.now()}_${++_uid}`;
+const PIN_H = 18,
+  PIN_PAD = 6,
+  BLOCK_MIN_W = 120,
+  HEADER_H = 28,
+  PIN_DOT_R = 4;
+function getBlockHeight(comp) {
+  const maxPins = Math.max((comp.pinsL || []).length, (comp.pinsR || []).length, 1);
+  return HEADER_H + maxPins * PIN_H + PIN_PAD * 2;
+}
+function getBlockWidth(comp) {
+  const lMax = Math.max(...(comp.pinsL || []).map(p => p.length * 6.5 + 30), BLOCK_MIN_W / 2);
+  const rMax = (comp.pinsR || []).length ? Math.max(...comp.pinsR.map(p => p.length * 6.5 + 30), BLOCK_MIN_W / 2) : BLOCK_MIN_W / 2;
+  return Math.max(lMax + rMax, BLOCK_MIN_W);
+}
+function getPinPos(comp, side, idx) {
+  const w = getBlockWidth(comp),
+    h = getBlockHeight(comp);
+  const y = comp.y + HEADER_H + PIN_PAD + idx * PIN_H + PIN_H / 2;
+  if (side === "L") return {
+    x: comp.x,
+    y
+  };
+  return {
+    x: comp.x + w,
+    y
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PRINT GENERATOR
+// ═══════════════════════════════════════════════════════════════════
+function generatePrintHTML(name, nodes, wires, customComps) {
+  const now = new Date().toLocaleString("pt-PT");
+  // Build SVG
+  const xs = nodes.map(n => n.x),
+    ys = nodes.map(n => n.y);
+  const heights = nodes.map(n => getBlockHeight(n)),
+    widths = nodes.map(n => getBlockWidth(n));
+  const maxX = Math.max(...xs.map((x, i) => x + widths[i])) + 40;
+  const maxY = Math.max(...ys.map((y, i) => y + heights[i])) + 40;
+  const svgW = Math.max(maxX, 400),
+    svgH = Math.max(maxY, 300);
+  let svg = "";
+  // Wires
+  wires.forEach(w => {
+    const srcN = nodes.find(n => n.id === w.srcNode);
+    const dstN = nodes.find(n => n.id === w.dstNode);
+    if (!srcN || !dstN) return;
+    const p1 = getPinPos(srcN, w.srcSide, w.srcIdx);
+    const p2 = getPinPos(dstN, w.dstSide, w.dstIdx);
+    const mx = (p1.x + p2.x) / 2;
+    svg += `<path d="M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}" stroke="${w.color}" stroke-width="2" fill="none"/>`;
+    if (w.label) {
+      const lx = (p1.x + p2.x) / 2,
+        ly = (p1.y + p2.y) / 2;
+      svg += `<text x="${lx}" y="${ly - 5}" text-anchor="middle" font-size="7" fill="${w.color}" font-family="monospace" font-weight="bold">${w.label}</text>`;
+    }
+  });
+  // Nodes
+  nodes.forEach(n => {
+    const w = getBlockWidth(n),
+      h = getBlockHeight(n);
+    svg += `<rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="6" fill="${n.color || '#444'}" opacity="0.9" stroke="#333" stroke-width="1.5"/>`;
+    svg += `<text x="${n.x + w / 2}" y="${n.y + 18}" text-anchor="middle" font-size="10" fill="#fff" font-family="sans-serif" font-weight="bold">${n.name}</text>`;
+    (n.pinsL || []).forEach((p, i) => {
+      const py = n.y + HEADER_H + PIN_PAD + i * PIN_H + PIN_H / 2;
+      svg += `<circle cx="${n.x}" cy="${py}" r="3" fill="#ddd" stroke="#888" stroke-width="0.5"/><text x="${n.x + 8}" y="${py + 3}" font-size="8" fill="#fff" font-family="monospace">${p}</text>`;
+    });
+    (n.pinsR || []).forEach((p, i) => {
+      const py = n.y + HEADER_H + PIN_PAD + i * PIN_H + PIN_H / 2;
+      svg += `<circle cx="${n.x + w}" cy="${py}" r="3" fill="#ddd" stroke="#888" stroke-width="0.5"/><text x="${n.x + w - 8}" y="${py + 3}" font-size="8" fill="#fff" font-family="monospace" text-anchor="end">${p}</text>`;
+    });
+  });
+
+  // Connection table
+  const rows = wires.map((w, i) => {
+    const srcN = nodes.find(n => n.id === w.srcNode);
+    const dstN = nodes.find(n => n.id === w.dstNode);
+    const srcPin = srcN ? (w.srcSide === "L" ? srcN.pinsL : srcN.pinsR)?.[w.srcIdx] || "?" : "?";
+    const dstPin = dstN ? (w.dstSide === "L" ? dstN.pinsL : dstN.pinsR)?.[w.dstIdx] || "?" : "?";
+    return `<tr><td>${i + 1}</td><td>${w.label || "—"}</td><td><b>${srcN?.name || "?"}</b></td><td>${srcPin}</td><td><b>${dstN?.name || "?"}</b></td><td>${dstPin}</td><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${w.color};border:1px solid #999"></span></td></tr>`;
+  }).join("");
+
+  // BOM
+  const bom = {};
+  nodes.forEach(n => {
+    const t = n.cat || "Outro";
+    if (!bom[t]) bom[t] = [];
+    bom[t].push(n.name);
+  });
+  return `<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Esquema — ${name}</title>
+<style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:10px;line-height:1.4;padding:10px}
+.hdr{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #1B3A6B;padding-bottom:8px;margin-bottom:12px}
+.hdr h1{font-size:18px;color:#1B3A6B;font-weight:800}.hdr .meta{text-align:right;font-size:9px;color:#666}
+.bw{text-align:center;margin:12px 0;page-break-inside:avoid}.bw svg{border:1px solid #ccc;border-radius:6px;background:#f8f8fc;max-width:100%;height:auto}
+.sec{margin-top:14px;page-break-inside:avoid}.sec h2{font-size:12px;color:#1B3A6B;border-bottom:1.5px solid #ccc;padding-bottom:3px;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+table{width:100%;border-collapse:collapse;font-size:9px}th{background:#1B3A6B;color:#fff;padding:3px 6px;text-align:left;font-weight:600}
+td{padding:3px 6px;border-bottom:1px solid #ddd}tr:nth-child(even) td{background:#f0f4f8}
+.bg{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
+.bc{border:1px solid #ddd;border-radius:4px;padding:5px 8px}.bc .t{font-weight:700;font-size:10px;color:#1B3A6B;margin-bottom:2px}.bc .items{font-size:8px;color:#666}
+.np{display:block}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.np{display:none!important}}</style></head>
+<body><div class="np" style="text-align:center;margin-bottom:10px"><button onclick="window.print()" style="padding:8px 24px;font-size:13px;font-weight:700;background:#1B3A6B;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-right:8px">🖨️ Imprimir</button><button onclick="window.close()" style="padding:8px 16px;font-size:13px;background:#eee;color:#333;border:1px solid #ccc;border-radius:6px;cursor:pointer">Fechar</button></div>
+<div class="hdr"><div><h1>ESQUEMA DE LIGAÇÕES</h1><div style="font-size:10px;color:#444;margin-top:2px">Diagrama de cablagem — Pinagem e conexões</div></div>
+<div class="meta"><div style="font-size:13px;font-weight:700;color:#333">${name}</div><div>Componentes: ${nodes.length} · Ligações: ${wires.length}</div><div>${now}</div></div></div>
+<div class="bw"><svg width="${Math.min(svgW, 900)}" height="${Math.round(Math.min(svgW, 900) / svgW * svgH)}" viewBox="0 0 ${svgW} ${svgH}">
+<rect width="${svgW}" height="${svgH}" rx="6" fill="#f8f8fc"/>${svg}</svg></div>
+${wires.length ? `<div class="sec"><h2>Tabela de Ligações</h2><table><thead><tr><th>#</th><th>Cabo</th><th>Origem</th><th>Pino</th><th>Destino</th><th>Pino</th><th>Cor</th><th>AWG</th><th>Fio real</th><th>Comp.</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}
+<div class="sec"><h2>Lista de Material</h2><div class="bg">${Object.entries(bom).map(([cat, items]) => `<div class="bc"><div class="t">${cat} (${items.length})</div><div class="items">${items.join(", ")}</div></div>`).join("")}</div></div>
+<div class="sec"><h2>Avisos e Recomenda\u00E7\u00F5es</h2><div style="font-size:9px">${(() => {
+    const allW = [];
+    wires.forEach(w => {
+      const awgE = AWG_TABLE.find(a => a.awg === (w.awg || 22));
+      const vw = validateWire(w, awgE);
+      vw.forEach(v => {
+        const srcN = nodes.find(n => n.id === w.srcNode);
+        const dstN = nodes.find(n => n.id === w.dstNode);
+        allW.push({
+          ...v,
+          ctx: (w.label || "Fio") + " (" + (srcN?.name || "?") + "\u2192" + (dstN?.name || "?") + ")"
+        });
+      });
+    });
+    const recs = getRecommendations(nodes, wires);
+    if (!allW.length && !recs.length) return "<em style=\"color:#999\">Nenhum aviso.</em>";
+    return [...allW.map(w => "<div style=\"margin:3px 0;padding:4px 8px;border-left:3px solid " + (w.severity === "red" ? "#dc2626" : "#d97706") + ";background:" + (w.severity === "red" ? "#fef2f2" : "#fffbeb") + "\"><b>" + w.ctx + ":</b> " + w.msg + "</div>"), ...recs.map(r => "<div style=\"margin:3px 0;padding:4px 8px;border-left:3px solid " + (r.severity === "red" ? "#dc2626" : r.severity === "yellow" ? "#d97706" : "#3b82f6") + ";background:" + (r.severity === "red" ? "#fef2f2" : r.severity === "yellow" ? "#fffbeb" : "#eff6ff") + "\"><b>" + r.node + ":</b> " + r.msg + "</div>")].join("");
+  })()}</div></div>
+<div class="sec"><h2>Notas</h2><div style="border:1px dashed #ccc;border-radius:4px;padding:16px;min-height:50px;color:#bbb;font-style:italic">Espaço para anotações...</div></div>
+<div style="margin-top:16px;border-top:1px solid #ccc;padding-top:6px;font-size:8px;color:#999;display:flex;justify-content:space-between"><span>Esquemas de Ligação — ES/3 Prof. Dr. Flávio F. Pinto Resende</span><span>${now}</span></div></body></html>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MODAL (top-level, same pattern as Perfboard)
+// ═══════════════════════════════════════════════════════════════════
+function Modal({
+  children,
+  onClose
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.7)",
+      zIndex: 1000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backdropFilter: "blur(4px)"
+    },
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#0f1923",
+      border: "1px solid #1e3a5f",
+      borderRadius: 10,
+      minWidth: 380,
+      maxWidth: 580,
+      maxHeight: "85vh",
+      overflow: "auto",
+      boxShadow: "0 20px 60px rgba(0,0,0,0.5)"
+    },
+    onClick: e => e.stopPropagation()
+  }, children));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════
+const SchematicDesigner = function SchematicDesigner() {
+  // ─── State ───
+  const [nodes, setNodes] = useState([]); // placed components
+  const [wires, setWires] = useState([]); // connections
+  const [customComps, setCustomComps] = useState([]);
+  const [customMCUs, setCustomMCUs] = useState([]);
+  const [tool, setTool] = useState("select"); // select, wire, eraser
+  const [wireColor, setWireColor] = useState(WIRE_COLORS[0].color);
+  const [wireLabel, setWireLabel] = useState("");
+  const [wireAWG, setWireAWG] = useState(22);
+  const [wireRealColor, setWireRealColor] = useState("red");
+  const [wireLengthCm, setWireLengthCm] = useState(15);
+  const [wireVoltage, setWireVoltage] = useState(5);
+  const [wireCurrent, setWireCurrent] = useState(20);
+  const [showWireProps, setShowWireProps] = useState(false);
+  const [editingWire, setEditingWire] = useState(null); // wire id for editing props
+  const [wireMode, setWireMode] = useState("lines"); // "lines" | "tags"
+  const [wireStart, setWireStart] = useState(null); // {nodeId, side, idx}
+
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedWire, setSelectedWire] = useState(null);
+  const [hoverPin, setHoverPin] = useState(null);
+  const [dragging, setDragging] = useState(null);
+  const dragStartPos = useRef(null);
+  const [editingNode, setEditingNode] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({
+    x: 0,
+    y: 0
+  });
+  const [panning, setPanning] = useState(null);
+  const wasPanning = useRef(false);
+  const [history, setHistory] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+  const [projectName, setProjectName] = useState("Sem título");
+  const [saveStatus, setSaveStatus] = useState(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [savedProjects, setSavedProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showAddComp, setShowAddComp] = useState(false);
+  const [showCreator, setShowCreator] = useState(false);
+  const [creatorType, setCreatorType] = useState("comp"); // "comp" | "mcu"
+  const [showPinEditor, setShowPinEditor] = useState(null); // null or nodeId
+
+  // Creator state
+  const [crName, setCrName] = useState("");
+  const [crCat, setCrCat] = useState("Personalizado");
+  const [crColor, setCrColor] = useState("#555");
+  const [crPinsL, setCrPinsL] = useState(["VCC", "GND", "SDA", "SCL"]);
+  const [crPinsR, setCrPinsR] = useState([]);
+  const [crPinsLTypes, setCrPinsLTypes] = useState(["power", "gnd", "i2c", "i2c"]);
+  const [crPinsRTypes, setCrPinsRTypes] = useState([]);
+  const svgRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [canvasSize, setCanvasSize] = useState({
+    w: 800,
+    h: 600
+  });
+  const lastSaveRef = useRef("");
+  const pinchRef = useRef(null);
+  const closeAllModals = () => {
+    setShowSaveModal(false);
+    setShowLoadModal(false);
+    setShowAddComp(false);
+    setShowCreator(false);
+    setShowPinEditor(false);
+    setConfirmDelete(null);
+  };
+
+  // ─── Canvas size tracking ───
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const update = () => setCanvasSize({
+      w: el.clientWidth || 800,
+      h: el.clientHeight || 600
+    });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // ─── Load on mount ───
+  useEffect(() => {
+    (async () => {
+      const cc = await store.get("schema_custom_comps");
+      if (cc) try {
+        setCustomComps(JSON.parse(cc));
+      } catch (e) {}
+      const cm = await store.get("schema_custom_mcus");
+      if (cm) try {
+        setCustomMCUs(JSON.parse(cm));
+      } catch (e) {}
+    })();
+  }, []);
+  const saveCustomComps = async c => {
+    setCustomComps(c);
+    await store.set("schema_custom_comps", JSON.stringify(c));
+  };
+  const saveCustomMCUs = async m => {
+    setCustomMCUs(m);
+    await store.set("schema_custom_mcus", JSON.stringify(m));
+  };
+
+  // ─── All libraries merged ───
+  const allMCUs = useMemo(() => [...MCU_LIBRARY, ...customMCUs], [customMCUs]);
+  const allComps = useMemo(() => [...COMP_LIBRARY, ...customComps], [customComps]);
+  const allLib = useMemo(() => [...allMCUs, ...allComps], [allMCUs, allComps]);
+  const categories = useMemo(() => [...new Set(allLib.map(l => l.cat))], [allLib]);
+
+  // ─── History ───
+  const pushHistory = useCallback(() => {
+    setHistory(h => [...h.slice(-40), {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      wires: JSON.parse(JSON.stringify(wires))
+    }]);
+    setRedoStack([]);
+  }, [nodes, wires]);
+  const undo = useCallback(() => {
+    if (!history.length) return;
+    setRedoStack(rs => [...rs.slice(-20), {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      wires: JSON.parse(JSON.stringify(wires))
+    }]);
+    const prev = history[history.length - 1];
+    setNodes(prev.nodes);
+    setWires(prev.wires);
+    setHistory(h => h.slice(0, -1));
+    setSelectedNode(null);
+    setSelectedWire(null);
+  }, [history, nodes, wires]);
+  const redo = useCallback(() => {
+    if (!redoStack.length) return;
+    setHistory(h => [...h, {
+      nodes: JSON.parse(JSON.stringify(nodes)),
+      wires: JSON.parse(JSON.stringify(wires))
+    }]);
+    const next = redoStack[redoStack.length - 1];
+    setNodes(next.nodes);
+    setWires(next.wires);
+    setRedoStack(rs => rs.slice(0, -1));
+  }, [redoStack, nodes, wires]);
+
+  // ─── Save/Load ───
+  const saveToStorage = async n => {
+    setSaveStatus("saving");
+    const k = `schema:${(n || projectName).replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+    const ok = await store.set(k, JSON.stringify({
+      projectName: n || projectName,
+      nodes,
+      wires,
+      customComps,
+      customMCUs,
+      savedAt: new Date().toISOString()
+    }));
+    setSaveStatus(ok ? "saved" : "error");
+    setTimeout(() => {
+      setSaveStatus(null);
+      setShowSaveModal(false);
+    }, 1300);
+  };
+  const loadProjectList = async () => {
+    setLoadingProjects(true);
+    const keys = await store.list("schema:");
+    const projects = [];
+    for (const k of keys) {
+      const v = await store.get(k);
+      if (v) try {
+        const d = JSON.parse(v);
+        projects.push({
+          key: k,
+          name: d.projectName || k.replace("schema:", ""),
+          savedAt: d.savedAt,
+          count: d.nodes?.length || 0,
+          wcount: d.wires?.length || 0
+        });
+      } catch (e) {}
+    }
+    setSavedProjects(projects.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || "")));
+    setLoadingProjects(false);
+    setShowLoadModal(true);
+  };
+  const loadFromStorage = async key => {
+    const v = await store.get(key);
+    if (v) {
+      const d = JSON.parse(v);
+      setNodes(d.nodes || []);
+      setWires(d.wires || []);
+      setProjectName(d.projectName || "");
+      if (d.customComps?.length) saveCustomComps(d.customComps);
+      if (d.customMCUs?.length) saveCustomMCUs(d.customMCUs);
+      setHistory([]);
+      setRedoStack([]);
+      setSelectedNode(null);
+      setSelectedWire(null);
+    }
+    setShowLoadModal(false);
+  };
+  const exportFile = () => {
+    const blob = new Blob([JSON.stringify({
+      _format: "schema-designer",
+      _version: 1,
+      projectName,
+      nodes,
+      wires,
+      customComps,
+      customMCUs,
+      savedAt: new Date().toISOString()
+    }, null, 2)], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${projectName.replace(/\s/g, "_")}.schema.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setSaveStatus("saved");
+    setTimeout(() => setSaveStatus(null), 1500);
+  };
+  const importFile = e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.nodes) {
+          setNodes(d.nodes || []);
+          setWires(d.wires || []);
+          setProjectName(d.projectName || "");
+          if (d.customComps?.length) saveCustomComps([...customComps, ...d.customComps.filter(c => !customComps.find(e => e.id === c.id))]);
+          if (d.customMCUs?.length) saveCustomMCUs([...customMCUs, ...d.customMCUs.filter(c => !customMCUs.find(e => e.id === c.id))]);
+          setHistory([]);
+          setRedoStack([]);
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus(null), 1500);
+        }
+      } catch (e) {
+        alert("Ficheiro inválido.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // ─── Auto-save ───
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      const current = JSON.stringify({
+        nodes,
+        wires
+      });
+      if (current !== lastSaveRef.current && nodes.length > 0) {
+        await store.set("schema:__autosave__", JSON.stringify({
+          projectName: "(auto) " + projectName,
+          nodes,
+          wires,
+          savedAt: new Date().toISOString()
+        }));
+        lastSaveRef.current = current;
+      }
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [nodes, wires, projectName]);
+
+  // ─── Print ───
+  const handlePrint = () => {
+    const html = generatePrintHTML(projectName, nodes, wires, customComps);
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(() => win.print(), 500);
+    }
+  };
+
+  // ─── Add component to canvas ───
+  const addNodeFromLib = libItem => {
+    pushHistory();
+    const n = {
+      id: uid(),
+      name: libItem.name,
+      cat: libItem.cat,
+      color: libItem.color,
+      pinsL: [...(libItem.pinsL || [])],
+      pinsR: [...(libItem.pinsR || [])],
+      pinsLTypes: [...(libItem.pinsLTypes || [])],
+      pinsRTypes: [...(libItem.pinsRTypes || [])],
+      x: 60 + Math.random() * 200,
+      y: 60 + Math.random() * 150
+    };
+    setNodes(ns => [...ns, n]);
+    setShowAddComp(false);
+  };
+
+  // ─── SVG Interaction ───
+  const svgCoord = useCallback(e => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    const touch = e.touches?.[0] || e.changedTouches?.[0];
+    const cx = touch ? touch.clientX : e.clientX;
+    const cy = touch ? touch.clientY : e.clientY;
+    return {
+      x: (cx - rect.left) / zoom - pan.x,
+      y: (cy - rect.top) / zoom - pan.y
+    };
+  }, [zoom, pan]);
+  const findPinAt = useCallback(pos => {
+    for (const n of nodes) {
+      const w = getBlockWidth(n);
+      for (let i = 0; i < (n.pinsL || []).length; i++) {
+        const pp = getPinPos(n, "L", i);
+        if (Math.abs(pos.x - pp.x) < 12 && Math.abs(pos.y - pp.y) < 10) return {
+          nodeId: n.id,
+          side: "L",
+          idx: i,
+          pin: n.pinsL[i]
+        };
+      }
+      for (let i = 0; i < (n.pinsR || []).length; i++) {
+        const pp = getPinPos(n, "R", i);
+        if (Math.abs(pos.x - pp.x) < 12 && Math.abs(pos.y - pp.y) < 10) return {
+          nodeId: n.id,
+          side: "R",
+          idx: i,
+          pin: n.pinsR[i]
+        };
+      }
+    }
+    return null;
+  }, [nodes]);
+  const findNodeAt = useCallback(pos => {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i],
+        w = getBlockWidth(n),
+        h = getBlockHeight(n);
+      if (pos.x >= n.x && pos.x <= n.x + w && pos.y >= n.y && pos.y <= n.y + h) return n.id;
+    }
+    return null;
+  }, [nodes]);
+  const handleSvgClick = e => {
+    if (dragging || panning) return;
+    if (wasPanning.current) {
+      wasPanning.current = false;
+      return;
+    }
+    const pos = svgCoord(e);
+    if (!pos) return;
+    if (tool === "wire") {
+      const pin = findPinAt(pos);
+      if (!pin) return;
+      if (!wireStart) {
+        setWireStart(pin);
+      } else {
+        if (wireStart.nodeId === pin.nodeId) {
+          setWireStart(null);
+          return;
+        }
+        // Block exact duplicate (same src+dst pair)
+        const isDup = wires.some(w => w.srcNode === wireStart.nodeId && w.srcSide === wireStart.side && w.srcIdx === wireStart.idx && w.dstNode === pin.nodeId && w.dstSide === pin.side && w.dstIdx === pin.idx || w.dstNode === wireStart.nodeId && w.dstSide === wireStart.side && w.dstIdx === wireStart.idx && w.srcNode === pin.nodeId && w.srcSide === pin.side && w.srcIdx === pin.idx);
+        if (isDup) {
+          setWireStart(null);
+          return;
+        }
+        const srcN = nodes.find(nn => nn.id === wireStart.nodeId);
+        const dstN = nodes.find(nn => nn.id === pin.nodeId);
+        const autoTag = wireLabel || generateTag(srcN, wireStart.side, wireStart.idx, dstN, pin.side, pin.idx);
+        pushHistory();
+        setWires(ws => [...ws, {
+          id: uid(),
+          srcNode: wireStart.nodeId,
+          srcSide: wireStart.side,
+          srcIdx: wireStart.idx,
+          dstNode: pin.nodeId,
+          dstSide: pin.side,
+          dstIdx: pin.idx,
+          color: wireColor,
+          label: autoTag,
+          awg: wireAWG,
+          realColor: wireRealColor,
+          lengthCm: wireLengthCm,
+          voltageV: wireVoltage,
+          currentMA: wireCurrent
+        }]);
+        setWireStart(null);
+      }
+      return;
+    }
+    if (tool === "eraser") {
+      // Try wire first, then node
+      const pin = findPinAt(pos);
+      if (pin) {
+        const wi = wires.findIndex(w => w.srcNode === pin.nodeId && w.srcSide === pin.side && w.srcIdx === pin.idx || w.dstNode === pin.nodeId && w.dstSide === pin.side && w.dstIdx === pin.idx);
+        if (wi >= 0) {
+          pushHistory();
+          setWires(ws => ws.filter((_, i) => i !== wi));
+          return;
+        }
+      }
+      const nid = findNodeAt(pos);
+      if (nid) {
+        pushHistory();
+        setWires(ws => ws.filter(w => w.srcNode !== nid && w.dstNode !== nid));
+        setNodes(ns => ns.filter(n => n.id !== nid));
+        setSelectedNode(null);
+        return;
+      }
+      return;
+    }
+    if (tool === "select") {
+      // Double-click to rename
+      if (e.detail === 2) {
+        const nid = findNodeAt(pos);
+        if (nid) {
+          const n = nodes.find(nn => nn.id === nid);
+          setEditingLabel(nid);
+          setEditLabelText(n?.name || "");
+          setTimeout(() => editLabelRef.current?.focus(), 50);
+          return;
+        }
+      }
+      const nid = findNodeAt(pos);
+      if (nid) {
+        setSelectedNode(nid);
+        setSelectedWire(null);
+        return;
+      }
+      // Check wire click
+      setSelectedNode(null);
+      setSelectedWire(null);
+    }
+  };
+  const handleMouseDown = e => {
+    const pos = svgCoord(e);
+    if (!pos) return;
+    if (tool === "select" && e.button === 0) {
+      const nid = findNodeAt(pos);
+      if (nid) {
+        const n = nodes.find(nn => nn.id === nid);
+        setDragging({
+          id: nid,
+          offX: pos.x - n.x,
+          offY: pos.y - n.y
+        });
+        dragStartPos.current = {
+          x: n.x,
+          y: n.y
+        };
+        setSelectedNode(nid);
+        e.preventDefault?.();
+        return;
+      }
+    }
+    // Middle-click or right-click for panning
+    if (e.button === 1 || e.button === 2 || tool === "select" && !findNodeAt(pos)) {
+      setPanning({
+        startX: e.clientX,
+        startY: e.clientY,
+        panX: pan.x,
+        panY: pan.y
+      });
+      wasPanning.current = true;
+      e.preventDefault?.();
+    }
+  };
+  const handleMouseMove = e => {
+    // Pin hover detection
+    if (!dragging && !panning && tool !== "eraser") {
+      const pos = svgCoord(e);
+      if (pos) setHoverPin(findPinAt(pos));else setHoverPin(null);
+    }
+    if (panning) {
+      const dx = (e.clientX - panning.startX) / zoom;
+      const dy = (e.clientY - panning.startY) / zoom;
+      setPan({
+        x: panning.panX + dx,
+        y: panning.panY + dy
+      });
+      return;
+    }
+    if (!dragging) return;
+    const pos = svgCoord(e);
+    if (!pos) return;
+    setNodes(ns => ns.map(n => n.id === dragging.id ? {
+      ...n,
+      x: pos.x - dragging.offX,
+      y: pos.y - dragging.offY
+    } : n));
+  };
+  const handleMouseUp = () => {
+    if (dragging && !panning && dragStartPos.current) {
+      const n = nodes.find(nn => nn.id === dragging.id);
+      if (n && (Math.abs(n.x - dragStartPos.current.x) > 1 || Math.abs(n.y - dragStartPos.current.y) > 1)) pushHistory();
+      dragStartPos.current = null;
+    }
+    if (panning) setTimeout(() => {
+      wasPanning.current = false;
+    }, 50);
+    setDragging(null);
+    setPanning(null);
+  };
+
+  // ─── Commit label edit ───
+  const commitLabel = () => {
+    if (!editingLabel) return;
+    pushHistory();
+    setNodes(ns => ns.map(n => n.id === editingLabel ? {
+      ...n,
+      name: editLabelText
+    } : n));
+    setEditingLabel(null);
+  };
+
+  // ─── Keyboard ───
+  useEffect(() => {
+    const handle = e => {
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        if (e.key === "Escape") {
+          e.target.blur();
+          setEditingLabel(null);
+        }
+        if (e.key === "Enter" && editingLabel) commitLabel();
+        return;
+      }
+      if (e.key === "Escape") {
+        setWireStart(null);
+        setSelectedNode(null);
+        setSelectedWire(null);
+        closeAllModals();
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedNode) {
+        pushHistory();
+        const nid = selectedNode;
+        setWires(ws => ws.filter(w => w.srcNode !== nid && w.dstNode !== nid));
+        setNodes(ns => ns.filter(n => n.id !== nid));
+        setSelectedNode(null);
+      }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || e.shiftKey && e.key === "z" || e.key === "Z")) {
+        e.preventDefault();
+        redo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        saveToStorage();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        handlePrint();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "d" && selectedNode) {
+        e.preventDefault();
+        pushHistory();
+        const orig = nodes.find(n => n.id === selectedNode);
+        if (!orig) return;
+        const dup = {
+          ...JSON.parse(JSON.stringify(orig)),
+          id: uid(),
+          x: orig.x + 30,
+          y: orig.y + 30
+        };
+        setNodes(ns => [...ns, dup]);
+        setSelectedNode(dup.id);
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  }, [selectedNode, selectedWire, undo, redo, pushHistory, nodes, wires]);
+
+  // ─── Custom Component Creator ───
+  const saveCreatedComp = async () => {
+    if (!crName.trim()) return;
+    const comp = {
+      id: `custom_${Date.now()}`,
+      name: crName.trim(),
+      cat: crCat,
+      color: crColor,
+      pinsL: [...crPinsL],
+      pinsR: [...crPinsR],
+      pinsLTypes: [...crPinsLTypes],
+      pinsRTypes: [...crPinsRTypes]
+    };
+    if (creatorType === "mcu") await saveCustomMCUs([...customMCUs, comp]);else await saveCustomComps([...customComps, comp]);
+    setShowCreator(false);
+    setCrName("");
+    setCrPinsL(["VCC", "GND"]);
+    setCrPinsR([]);
+    setCrPinsLTypes(["power", "gnd"]);
+    setCrPinsRTypes([]);
+  };
+  const addPinToCreator = side => {
+    if (side === "L") {
+      setCrPinsL(p => [...p, "Pino"]);
+      setCrPinsLTypes(t => [...t, "digital"]);
+    } else {
+      setCrPinsR(p => [...p, "Pino"]);
+      setCrPinsRTypes(t => [...t, "digital"]);
+    }
+  };
+  const removePinFromCreator = (side, idx) => {
+    if (side === "L") {
+      setCrPinsL(p => p.filter((_, i) => i !== idx));
+      setCrPinsLTypes(t => t.filter((_, i) => i !== idx));
+    } else {
+      setCrPinsR(p => p.filter((_, i) => i !== idx));
+      setCrPinsRTypes(t => t.filter((_, i) => i !== idx));
+    }
+  };
+  const updateCreatorPin = (side, idx, val) => {
+    if (side === "L") setCrPinsL(p => p.map((v, i) => i === idx ? val : v));else setCrPinsR(p => p.map((v, i) => i === idx ? val : v));
+  };
+  const updateCreatorPinType = (side, idx, val) => {
+    if (side === "L") setCrPinsLTypes(t => t.map((v, i) => i === idx ? val : v));else setCrPinsRTypes(t => t.map((v, i) => i === idx ? val : v));
+  };
+
+  // ─── Rendering ───
+  const renderNodes = () => nodes.map(n => {
+    const w = getBlockWidth(n),
+      h = getBlockHeight(n);
+    const isSel = selectedNode === n.id;
+    return /*#__PURE__*/React.createElement("g", {
+      key: n.id,
+      style: {
+        filter: isSel ? "drop-shadow(0 0 6px #fff)" : "none",
+        cursor: tool === "select" ? "grab" : "default"
+      }
+    }, /*#__PURE__*/React.createElement("rect", {
+      x: n.x,
+      y: n.y,
+      width: w,
+      height: h,
+      rx: 6,
+      fill: n.color || "#444",
+      stroke: isSel ? "#fff" : "#555",
+      strokeWidth: isSel ? 2.5 : 1.2,
+      opacity: 0.92
+    }), /*#__PURE__*/React.createElement("rect", {
+      x: n.x,
+      y: n.y,
+      width: w,
+      height: HEADER_H,
+      rx: 6,
+      fill: "rgba(0,0,0,0.3)"
+    }), /*#__PURE__*/React.createElement("rect", {
+      x: n.x,
+      y: n.y + HEADER_H - 4,
+      width: w,
+      height: 4,
+      fill: "rgba(0,0,0,0.3)"
+    }), /*#__PURE__*/React.createElement("text", {
+      x: n.x + w / 2,
+      y: n.y + 18,
+      textAnchor: "middle",
+      fontSize: 11,
+      fill: "#fff",
+      fontFamily: "sans-serif",
+      fontWeight: "bold"
+    }, n.name), (n.pinsL || []).map((p, i) => {
+      const py = n.y + HEADER_H + PIN_PAD + i * PIN_H + PIN_H / 2;
+      const pt = (n.pinsLTypes || [])[i] || "other";
+      const pc = PIN_TYPES.find(t => t.id === pt)?.color || "#888";
+      const hasWire = wires.some(ww => ww.srcNode === n.id && ww.srcSide === "L" && ww.srcIdx === i || ww.dstNode === n.id && ww.dstSide === "L" && ww.dstIdx === i);
+      const wireTag = wireMode === "tags" ? wires.find(ww => ww.srcNode === n.id && ww.srcSide === "L" && ww.srcIdx === i || ww.dstNode === n.id && ww.dstSide === "L" && ww.dstIdx === i) : null;
+      return /*#__PURE__*/React.createElement("g", {
+        key: `L${i}`
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: n.x,
+        cy: py,
+        r: PIN_DOT_R,
+        fill: hasWire ? pc : "#ccc",
+        stroke: pc,
+        strokeWidth: 1.5
+      }), /*#__PURE__*/React.createElement("text", {
+        x: n.x + 10,
+        y: py + 3.5,
+        fontSize: 9,
+        fill: "#e0e0e0",
+        fontFamily: "monospace"
+      }, p), wireTag && (() => {
+        const other = wireTag.srcNode === n.id ? nodes.find(nn => nn.id === wireTag.dstNode) : nodes.find(nn => nn.id === wireTag.srcNode);
+        const tagTxt = wireTag.label ? wireTag.label + "\u2192" + (other?.name || "?") : "\u25CF";
+        return /*#__PURE__*/React.createElement("text", {
+          x: n.x - 8,
+          y: py + 3,
+          fontSize: 6.5,
+          fill: wireTag.color,
+          fontFamily: "monospace",
+          fontWeight: "bold",
+          textAnchor: "end"
+        }, tagTxt);
+      })());
+    }), (n.pinsR || []).map((p, i) => {
+      const py = n.y + HEADER_H + PIN_PAD + i * PIN_H + PIN_H / 2;
+      const pt = (n.pinsRTypes || [])[i] || "other";
+      const pc = PIN_TYPES.find(t => t.id === pt)?.color || "#888";
+      const hasWire = wires.some(ww => ww.srcNode === n.id && ww.srcSide === "R" && ww.srcIdx === i || ww.dstNode === n.id && ww.dstSide === "R" && ww.dstIdx === i);
+      const wireTag = wireMode === "tags" ? wires.find(ww => ww.srcNode === n.id && ww.srcSide === "R" && ww.srcIdx === i || ww.dstNode === n.id && ww.dstSide === "R" && ww.dstIdx === i) : null;
+      return /*#__PURE__*/React.createElement("g", {
+        key: `R${i}`
+      }, /*#__PURE__*/React.createElement("circle", {
+        cx: n.x + w,
+        cy: py,
+        r: PIN_DOT_R,
+        fill: hasWire ? pc : "#ccc",
+        stroke: pc,
+        strokeWidth: 1.5
+      }), /*#__PURE__*/React.createElement("text", {
+        x: n.x + w - 10,
+        y: py + 3.5,
+        fontSize: 9,
+        fill: "#e0e0e0",
+        fontFamily: "monospace",
+        textAnchor: "end"
+      }, p), wireTag && (() => {
+        const other = wireTag.srcNode === n.id ? nodes.find(nn => nn.id === wireTag.dstNode) : nodes.find(nn => nn.id === wireTag.srcNode);
+        const tagTxt = wireTag.label ? wireTag.label + "\u2192" + (other?.name || "?") : "\u25CF";
+        return /*#__PURE__*/React.createElement("text", {
+          x: n.x + w + 8,
+          y: py + 3,
+          fontSize: 6.5,
+          fill: wireTag.color,
+          fontFamily: "monospace",
+          fontWeight: "bold"
+        }, tagTxt);
+      })());
+    }));
+  });
+  const renderWires = () => {
+    if (wireMode === "tags") return null; // tags shown on pins instead
+    return wires.map((w, i) => {
+      const srcN = nodes.find(n => n.id === w.srcNode);
+      const dstN = nodes.find(n => n.id === w.dstNode);
+      if (!srcN || !dstN) return null;
+      const p1 = getPinPos(srcN, w.srcSide, w.srcIdx);
+      const p2 = getPinPos(dstN, w.dstSide, w.dstIdx);
+      // Bezier curve with offset based on direction
+      const dx = Math.abs(p2.x - p1.x);
+      const cpOff = Math.max(40, dx * 0.4);
+      const cp1x = w.srcSide === "R" ? p1.x + cpOff : p1.x - cpOff;
+      const cp2x = w.dstSide === "R" ? p2.x + cpOff : p2.x - cpOff;
+      const isSel = selectedWire === i;
+      const mx = (p1.x + p2.x) / 2,
+        my = (p1.y + p2.y) / 2;
+      return /*#__PURE__*/React.createElement("g", {
+        key: w.id || i
+      }, isSel && /*#__PURE__*/React.createElement("path", {
+        d: `M${p1.x},${p1.y} C${cp1x},${p1.y} ${cp2x},${p2.y} ${p2.x},${p2.y}`,
+        stroke: "#fff",
+        strokeWidth: 5,
+        fill: "none",
+        opacity: 0.3
+      }), /*#__PURE__*/React.createElement("path", {
+        d: `M${p1.x},${p1.y} C${cp1x},${p1.y} ${cp2x},${p2.y} ${p2.x},${p2.y}`,
+        stroke: w.color,
+        strokeWidth: 2,
+        fill: "none",
+        strokeLinecap: "round"
+      }), w.label && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("rect", {
+        x: mx - w.label.length * 3.2 - 4,
+        y: my - 12,
+        width: w.label.length * 6.5 + 8,
+        height: 14,
+        rx: 3,
+        fill: "#0c0c14",
+        opacity: 0.85
+      }), /*#__PURE__*/React.createElement("text", {
+        x: mx,
+        y: my - 2,
+        textAnchor: "middle",
+        fontSize: 8,
+        fill: w.color,
+        fontFamily: "monospace",
+        fontWeight: "bold"
+      }, w.label)));
+    });
+  };
+  const renderWirePreview = () => {
+    if (!wireStart) return null;
+    const srcN = nodes.find(n => n.id === wireStart.nodeId);
+    if (!srcN) return null;
+    const p1 = getPinPos(srcN, wireStart.side, wireStart.idx);
+    return /*#__PURE__*/React.createElement("circle", {
+      cx: p1.x,
+      cy: p1.y,
+      r: 8,
+      fill: "none",
+      stroke: wireColor,
+      strokeWidth: 2,
+      strokeDasharray: "3,2",
+      opacity: 0.7
+    }, /*#__PURE__*/React.createElement("animate", {
+      attributeName: "r",
+      values: "6;10;6",
+      dur: "1s",
+      repeatCount: "indefinite"
+    }));
+  };
+
+  // ─── Styles ───
+  const btn = (active, c) => ({
+    padding: "4px 7px",
+    borderRadius: 4,
+    fontSize: 10,
+    background: active ? "rgba(59,130,246,0.12)" : "#1e293b",
+    color: c || (active ? "#3b82f6" : "#94a3b8"),
+    border: active ? "1px solid #3b82f6" : "1px solid #334155",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    width: "100%",
+    textAlign: "left"
+  });
+  const inputS = {
+    width: "100%",
+    background: "#1e293b",
+    color: "#e2e8f0",
+    border: "1px solid #334155",
+    borderRadius: 3,
+    padding: "4px 6px",
+    fontSize: 11,
+    fontFamily: "inherit"
+  };
+  const secTitle = {
+    fontSize: 8,
+    color: "#64748b",
+    letterSpacing: 2,
+    marginBottom: 2
+  };
+  const selNode = nodes.find(n => n.id === selectedNode);
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: "100vh",
+      background: "#0c0c14",
+      color: "#d4d4d8",
+      fontFamily: "'JetBrains Mono','Fira Code','Source Code Pro',monospace",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
+    }
+  }, /*#__PURE__*/React.createElement("style", null, `
+        @keyframes sch-pulse{0%,100%{r:6;opacity:0.6}50%{r:10;opacity:0.3}}
+        .sch-sidebar::-webkit-scrollbar{width:6px}.sch-sidebar::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+        .sch-canvas::-webkit-scrollbar{width:8px;height:8px}.sch-canvas::-webkit-scrollbar-thumb{background:#1e293b;border-radius:4px}
+      `), /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "linear-gradient(135deg,#0f1923,#1a2744)",
+      borderBottom: "1px solid #1e3a5f",
+      padding: "6px 12px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      flexWrap: "wrap",
+      gap: 5
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 26,
+      height: 26,
+      borderRadius: 5,
+      background: "linear-gradient(135deg,#3b82f6,#8b5cf6)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 13,
+      fontWeight: 900,
+      color: "#fff"
+    }
+  }, "\uD83D\uDD0C"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: "#e2e8f0",
+      letterSpacing: 1
+    }
+  }, "ESQUEMAS DE LIGA\xC7\xC3O"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      letterSpacing: 2
+    }
+  }, "v1 \xB7 Diagrama de Cablagem"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      flexWrap: "wrap"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: projectName,
+    onChange: e => setProjectName(e.target.value),
+    style: {
+      background: "#0c0c14",
+      color: "#f59e0b",
+      border: "1px solid #334155",
+      borderRadius: 4,
+      padding: "2px 8px",
+      fontSize: 11,
+      fontWeight: 700,
+      fontFamily: "inherit",
+      width: 160,
+      textAlign: "center"
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => saveToStorage(),
+    style: {
+      ...btn(false, "#22c55e"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, saveStatus === "saving" ? "⏳" : saveStatus === "saved" ? "✓" : "💾"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      closeAllModals();
+      setShowSaveModal(true);
+    },
+    style: {
+      ...btn(false, "#3b82f6"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "Guardar como"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      closeAllModals();
+      loadProjectList();
+    },
+    style: {
+      ...btn(false, "#f59e0b"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "\uD83D\uDCC2 Abrir"), /*#__PURE__*/React.createElement("button", {
+    onClick: exportFile,
+    style: {
+      ...btn(false, "#9b59b6"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "\uD83D\uDCE5 Ficheiro"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => fileInputRef.current?.click(),
+    style: {
+      ...btn(false, "#e67e22"),
+      width: "auto",
+      padding: "3px 8px"
+    }
+  }, "\uD83D\uDCE4 Abrir fich."), /*#__PURE__*/React.createElement("input", {
+    ref: fileInputRef,
+    type: "file",
+    accept: ".json",
+    onChange: importFile,
+    style: {
+      display: "none"
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flex: "1 1 0%",
+      overflow: "hidden",
+      minHeight: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sch-sidebar",
+    style: {
+      width: 175,
+      minWidth: 175,
+      background: "#0f1520",
+      borderRight: "1px solid #1e293b",
+      padding: "6px 5px",
+      overflowY: "auto",
+      overflowX: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      gap: 3,
+      height: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "FERRAMENTAS"), [{
+    id: "select",
+    icon: "▹",
+    label: "Selecionar",
+    desc: "Mover e editar"
+  }, {
+    id: "wire",
+    icon: "⚡",
+    label: "Ligar pinos",
+    desc: "Clique em 2 pinos"
+  }, {
+    id: "eraser",
+    icon: "⌫",
+    label: "Borracha",
+    desc: "Apagar fio/comp."
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    onClick: () => {
+      setTool(t.id);
+      setWireStart(null);
+    },
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 5,
+      padding: "4px 6px",
+      borderRadius: 4,
+      border: tool === t.id ? "1px solid #3b82f6" : "1px solid transparent",
+      background: tool === t.id ? "#3b82f615" : "transparent",
+      color: tool === t.id ? "#3b82f6" : "#94a3b8",
+      cursor: "pointer",
+      fontSize: 10,
+      fontFamily: "inherit",
+      textAlign: "left",
+      width: "100%"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 14,
+      width: 16,
+      textAlign: "center"
+    }
+  }, t.icon), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 600
+    }
+  }, t.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 6,
+      opacity: 0.6
+    }
+  }, t.desc)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "ADICIONAR COMPONENTE"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      closeAllModals();
+      setShowAddComp(true);
+    },
+    style: {
+      ...btn(false, "#3b82f6"),
+      fontWeight: 600
+    }
+  }, "+ Adicionar da biblioteca"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      closeAllModals();
+      setCreatorType("mcu");
+      setShowCreator(true);
+      setCrPinsL(["D0", "D1", "D2", "D3", "GND"]);
+      setCrPinsR(["5V", "A0", "A1", "A2", "GND"]);
+      setCrPinsLTypes(["digital", "digital", "digital", "digital", "gnd"]);
+      setCrPinsRTypes(["power", "analog", "analog", "analog", "gnd"]);
+      setCrCat("Personalizado");
+      setCrName("");
+    },
+    style: {
+      ...btn(false, "#8b5cf6"),
+      fontWeight: 600,
+      marginTop: 3
+    }
+  }, "\u271A Criar MCU / Placa"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      closeAllModals();
+      setCreatorType("comp");
+      setShowCreator(true);
+      setCrPinsL(["VCC", "GND", "SDA", "SCL"]);
+      setCrPinsR([]);
+      setCrPinsLTypes(["power", "gnd", "i2c", "i2c"]);
+      setCrPinsRTypes([]);
+      setCrCat("Personalizado");
+      setCrName("");
+    },
+    style: {
+      ...btn(false, "#f39c12"),
+      fontWeight: 600,
+      marginTop: 3
+    }
+  }, "\u271A Criar componente")), tool === "wire" && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "CABO / FIO"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b",
+      marginBottom: 3
+    }
+  }, "Nome do cabo:"), /*#__PURE__*/React.createElement("input", {
+    value: wireLabel,
+    onChange: e => setWireLabel(e.target.value),
+    placeholder: "Ex: SDA, CLK, VCC...",
+    style: {
+      ...inputS,
+      marginBottom: 4
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b",
+      marginBottom: 3
+    }
+  }, "Cor:"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 2,
+      marginBottom: 4
+    }
+  }, WIRE_COLORS.map(wc => /*#__PURE__*/React.createElement("button", {
+    key: wc.id,
+    onClick: () => {
+      setWireColor(wc.color);
+      setWireLabel(wc.label);
+    },
+    title: wc.label,
+    style: {
+      width: 16,
+      height: 16,
+      borderRadius: 3,
+      background: wc.color,
+      cursor: "pointer",
+      border: wireColor === wc.color ? "2px solid #fff" : "2px solid #333"
+    }
+  }))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowWireProps(!showWireProps),
+    style: {
+      ...btn(showWireProps, "#8b5cf6"),
+      marginTop: 4,
+      fontSize: 8
+    }
+  }, showWireProps ? "▾ Ocultar propriedades" : "▸ 📐 Propriedades do cabo"), showWireProps && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 3,
+      background: "#0c0c14",
+      borderRadius: 4,
+      padding: 6,
+      border: "1px solid #1e293b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      width: 35
+    }
+  }, "AWG:"), /*#__PURE__*/React.createElement("select", {
+    value: wireAWG,
+    onChange: e => setWireAWG(+e.target.value),
+    style: {
+      ...inputS,
+      flex: 1,
+      padding: "1px 3px",
+      fontSize: 9
+    }
+  }, AWG_TABLE.map(a => /*#__PURE__*/React.createElement("option", {
+    key: a.awg,
+    value: a.awg
+  }, "AWG ", a.awg, " (", a.mm2, "mm\xB2 \xB7 ", a.amps, "A)")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      width: 35
+    }
+  }, "Cor real:"), /*#__PURE__*/React.createElement("select", {
+    value: wireRealColor,
+    onChange: e => setWireRealColor(e.target.value),
+    style: {
+      ...inputS,
+      flex: 1,
+      padding: "1px 3px",
+      fontSize: 9
+    }
+  }, REAL_WIRE_COLORS.map(c => /*#__PURE__*/React.createElement("option", {
+    key: c.id,
+    value: c.id
+  }, c.label)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      width: 35
+    }
+  }, "Comp.:"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 1,
+    max: 500,
+    value: wireLengthCm,
+    onChange: e => setWireLengthCm(+e.target.value),
+    style: {
+      ...inputS,
+      flex: 1,
+      padding: "1px 3px",
+      fontSize: 9
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#475569"
+    }
+  }, "cm")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      width: 35
+    }
+  }, "Tens\xE3o:"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 0,
+    max: 240,
+    step: 0.1,
+    value: wireVoltage,
+    onChange: e => setWireVoltage(+e.target.value),
+    style: {
+      ...inputS,
+      flex: 1,
+      padding: "1px 3px",
+      fontSize: 9
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#475569"
+    }
+  }, "V")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      width: 35
+    }
+  }, "Corrente:"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: 0,
+    max: 50000,
+    value: wireCurrent,
+    onChange: e => setWireCurrent(+e.target.value),
+    style: {
+      ...inputS,
+      flex: 1,
+      padding: "1px 3px",
+      fontSize: 9
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 7,
+      color: "#475569"
+    }
+  }, "mA")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "VISTA DOS FIOS"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 3
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setWireMode("lines"),
+    style: {
+      ...btn(wireMode === "lines", "#3b82f6"),
+      width: "auto",
+      padding: "3px 8px",
+      fontSize: 8
+    }
+  }, "\u2501 Linhas"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setWireMode("tags"),
+    style: {
+      ...btn(wireMode === "tags", "#f59e0b"),
+      width: "auto",
+      padding: "3px 8px",
+      fontSize: 8
+    }
+  }, "\uD83C\uDFF7 Tags"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "EDI\xC7\xC3O"), /*#__PURE__*/React.createElement("button", {
+    onClick: undo,
+    style: {
+      ...btn(false, history.length ? "#f59e0b" : "#555")
+    }
+  }, "\u21BA Desfazer (Ctrl+Z)"), /*#__PURE__*/React.createElement("button", {
+    onClick: redo,
+    style: {
+      ...btn(false, redoStack.length ? "#3b82f6" : "#555")
+    }
+  }, "\u21BB Refazer (Ctrl+Y)"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (selectedNode) {
+        pushHistory();
+        const nid = selectedNode;
+        setWires(ws => ws.filter(w => w.srcNode !== nid && w.dstNode !== nid));
+        setNodes(ns => ns.filter(n => n.id !== nid));
+        setSelectedNode(null);
+      }
+    },
+    style: {
+      ...btn(false, selectedNode ? "#ef4444" : "#555")
+    }
+  }, "\u2715 Apagar sele\xE7\xE3o"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!nodes.length || confirm("Apagar todos os componentes?")) {
+        pushHistory();
+        setNodes([]);
+        setWires([]);
+      }
+    },
+    style: {
+      ...btn(false, "#ef4444")
+    }
+  }, "\u27F3 Limpar tudo")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4,
+      display: "flex",
+      flexDirection: "column",
+      gap: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "IMPRIMIR"), /*#__PURE__*/React.createElement("button", {
+    onClick: handlePrint,
+    style: {
+      ...btn(false, "#22c55e"),
+      fontWeight: 700
+    }
+  }, "\uD83D\uDDA8\uFE0F Imprimir esquema"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      const html = generatePrintHTML(projectName, nodes, wires, customComps);
+      const b = new Blob([html], {
+        type: "text/html"
+      });
+      const url = URL.createObjectURL(b);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${projectName.replace(/\s/g, "_")}_esquema.html`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    },
+    style: btn(false, "#3b82f6")
+  }, "\u2193 HTML"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!svgRef.current) return;
+      const b = new Blob([svgRef.current.outerHTML], {
+        type: "image/svg+xml"
+      });
+      const u = URL.createObjectURL(b);
+      const a = document.createElement("a");
+      a.href = u;
+      a.download = `${projectName}_schema.svg`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(u), 2000);
+    },
+    style: btn(false, "#9b59b6")
+  }, "\u2193 SVG"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!svgRef.current) return;
+      const svgData = new XMLSerializer().serializeToString(svgRef.current);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.width * 2;
+        canvas.height = img.height * 2;
+        ctx.scale(2, 2);
+        ctx.drawImage(img, 0, 0);
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = `${projectName}_schema.png`;
+        a.click();
+      };
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    },
+    style: btn(false, "#e67e22")
+  }, "\u2193 PNG")), selNode && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid #1e293b",
+      margin: "3px 0",
+      paddingTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: secTitle
+  }, "SELECIONADO"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "#e2e8f0",
+      fontWeight: 700,
+      marginBottom: 2
+    }
+  }, selNode.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, selNode.cat, " \xB7 ", (selNode.pinsL || []).length, "L + ", (selNode.pinsR || []).length, "R pinos"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b",
+      marginBottom: 3
+    }
+  }, wires.filter(w => w.srcNode === selNode.id || w.dstNode === selNode.id).length, " liga\xE7\xF5es"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      closeAllModals();
+      setShowPinEditor(selNode.id);
+    },
+    style: {
+      ...btn(false, "#8b5cf6"),
+      fontSize: 8
+    }
+  }, "\u270F\uFE0F Editar pinos"), wires.filter(w => w.srcNode === selNode.id || w.dstNode === selNode.id).length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "FIOS:"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      maxHeight: 120,
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column",
+      gap: 1
+    }
+  }, wires.filter(w => w.srcNode === selNode.id || w.dstNode === selNode.id).map(w => {
+    const other = w.srcNode === selNode.id ? nodes.find(n => n.id === w.dstNode) : nodes.find(n => n.id === w.srcNode);
+    const awgE = AWG_TABLE.find(a => a.awg === (w.awg || 22));
+    return /*#__PURE__*/React.createElement("div", {
+      key: w.id,
+      style: {
+        fontSize: 7,
+        padding: "2px 4px",
+        borderRadius: 2,
+        background: "#1e293b",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
+      }
+    }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: w.color,
+        fontWeight: 700
+      }
+    }, w.label || "?"), " \u2192 ", other?.name || "?"), /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: "#475569"
+      }
+    }, w.awg ? "AWG" + w.awg : "", " ", w.lengthCm ? w.lengthCm + "cm" : ""));
+  })))), nodes.length > 0 && (() => {
+    const allWarnings = [];
+    wires.forEach(w => {
+      const awgE = AWG_TABLE.find(a => a.awg === (w.awg || 22));
+      const vw = validateWire(w, awgE);
+      vw.forEach(v => {
+        const srcN = nodes.find(n => n.id === w.srcNode);
+        const dstN = nodes.find(n => n.id === w.dstNode);
+        allWarnings.push({
+          ...v,
+          context: (w.label || "Fio") + " (" + (srcN?.name || "?") + "→" + (dstN?.name || "?") + ")"
+        });
+      });
+    });
+    const recs = getRecommendations(nodes, wires);
+    if (!allWarnings.length && !recs.length) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        borderTop: "1px solid #1e293b",
+        margin: "3px 0",
+        paddingTop: 4
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: secTitle
+    }, "\u26A0\uFE0F AVISOS (", allWarnings.length + recs.length, ")"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        maxHeight: 180,
+        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 2
+      }
+    }, allWarnings.map((w, i) => /*#__PURE__*/React.createElement("div", {
+      key: "w" + i,
+      style: {
+        fontSize: 7,
+        padding: "3px 5px",
+        borderRadius: 3,
+        background: w.severity === "red" ? "#7f1d1d22" : "#78350f22",
+        border: `1px solid ${w.severity === "red" ? "#dc2626" : "#d97706"}44`,
+        color: w.severity === "red" ? "#fca5a5" : "#fcd34d"
+      }
+    }, /*#__PURE__*/React.createElement("strong", null, w.context, ":"), " ", w.msg)), recs.map((r, i) => /*#__PURE__*/React.createElement("div", {
+      key: "r" + i,
+      style: {
+        fontSize: 7,
+        padding: "3px 5px",
+        borderRadius: 3,
+        background: r.severity === "red" ? "#7f1d1d22" : r.severity === "yellow" ? "#78350f22" : "#0c4a6e22",
+        border: `1px solid ${r.severity === "red" ? "#dc2626" : r.severity === "yellow" ? "#d97706" : "#3b82f6"}44`,
+        color: r.severity === "red" ? "#fca5a5" : r.severity === "yellow" ? "#fcd34d" : "#93c5fd"
+      }
+    }, /*#__PURE__*/React.createElement("strong", null, r.node, ":"), " ", r.msg))));
+  })(), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "auto",
+      padding: "4px 0",
+      borderTop: "1px solid #1e293b"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#475569"
+    }
+  }, nodes.length, " comp. \xB7 ", wires.length, " liga\xE7\xF5es"))), /*#__PURE__*/React.createElement("div", {
+    className: "sch-canvas",
+    ref: canvasRef,
+    style: {
+      flex: "1 1 0%",
+      overflow: "hidden",
+      background: "#0a0e17",
+      position: "relative",
+      minHeight: 0
+    },
+    onContextMenu: e => e.preventDefault()
+  }, saveStatus && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 10,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 20,
+      padding: "5px 16px",
+      borderRadius: 5,
+      fontSize: 10,
+      fontWeight: 600,
+      background: saveStatus === "saved" ? "#22c55e22" : "#f59e0b22",
+      color: saveStatus === "saved" ? "#22c55e" : "#f59e0b",
+      border: `1px solid ${saveStatus === "saved" ? "#22c55e" : "#f59e0b"}`
+    }
+  }, saveStatus === "saving" ? "A guardar..." : "✓ Guardado!"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      top: 8,
+      right: 12,
+      display: "flex",
+      gap: 3,
+      zIndex: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setZoom(z => Math.min(z + 0.15, 3)),
+    style: {
+      width: 24,
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#e2e8f0",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "+"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#94a3b8",
+      border: "1px solid #334155",
+      fontSize: 9,
+      display: "flex",
+      alignItems: "center",
+      padding: "0 6px"
+    }
+  }, Math.round(zoom * 100), "%"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setZoom(z => Math.max(z - 0.15, 0.15)),
+    style: {
+      width: 24,
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#e2e8f0",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 12,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "\u2212"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      if (!nodes.length) {
+        setZoom(1);
+        setPan({
+          x: 0,
+          y: 0
+        });
+        return;
+      }
+      const xs = nodes.map(n => n.x);
+      const ys = nodes.map(n => n.y);
+      const ws = nodes.map(n => getBlockWidth(n));
+      const hs = nodes.map(n => getBlockHeight(n));
+      const minX = Math.min(...xs) - 30;
+      const minY = Math.min(...ys) - 30;
+      const maxX = Math.max(...xs.map((x, i) => x + ws[i])) + 30;
+      const maxY = Math.max(...ys.map((y, i) => y + hs[i])) + 30;
+      const bw = maxX - minX;
+      const bh = maxY - minY;
+      const zx = canvasSize.w / bw;
+      const zy = canvasSize.h / bh;
+      const z = Math.max(0.15, Math.min(Math.min(zx, zy) * 0.9, 3));
+      setZoom(z);
+      setPan({
+        x: -minX,
+        y: -minY
+      });
+    },
+    style: {
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#1abc9c",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 8,
+      padding: "0 6px",
+      fontFamily: "inherit"
+    }
+  }, "Ajustar"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setZoom(1);
+      setPan({
+        x: 0,
+        y: 0
+      });
+    },
+    style: {
+      height: 24,
+      borderRadius: 3,
+      background: "#1e293b",
+      color: "#94a3b8",
+      border: "1px solid #334155",
+      cursor: "pointer",
+      fontSize: 8,
+      padding: "0 6px",
+      fontFamily: "inherit"
+    }
+  }, "Reset")), editingLabel && (() => {
+    const n = nodes.find(nn => nn.id === editingLabel);
+    if (!n) return null;
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const w = getBlockWidth(n);
+    const sx = n.x * ctm.a + n.y * ctm.c + ctm.e;
+    const sy = n.x * ctm.b + n.y * ctm.d + ctm.f;
+    const sw = w * ctm.a;
+    const sh = 28 * ctm.d;
+    return /*#__PURE__*/React.createElement("input", {
+      ref: editLabelRef,
+      value: editLabelText,
+      onChange: e => setEditLabelText(e.target.value),
+      onBlur: commitLabel,
+      style: {
+        position: "fixed",
+        left: sx,
+        top: sy,
+        width: Math.max(60, sw),
+        height: Math.max(20, sh),
+        background: "#1e293b",
+        color: "#f59e0b",
+        border: "2px solid #3b82f6",
+        borderRadius: 4,
+        padding: "2px 6px",
+        fontSize: Math.max(9, 12 * ctm.a),
+        fontFamily: "inherit",
+        fontWeight: 700,
+        textAlign: "center",
+        zIndex: 30
+      }
+    });
+  })(), /*#__PURE__*/React.createElement("svg", {
+    ref: svgRef,
+    width: "100%",
+    height: "100%",
+    viewBox: `${-pan.x} ${-pan.y} ${canvasSize.w / zoom} ${canvasSize.h / zoom}`,
+    onClick: handleSvgClick,
+    onMouseDown: handleMouseDown,
+    onMouseMove: handleMouseMove,
+    onMouseUp: handleMouseUp,
+    onMouseLeave: handleMouseUp,
+    onTouchStart: e => {
+      if (e.touches.length === 2) {
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        pinchRef.current = d;
+        e.preventDefault();
+        return;
+      }
+      handleMouseDown(Object.assign({}, e, {
+        button: 0,
+        clientX: e.touches[0].clientX,
+        clientY: e.touches[0].clientY
+      }));
+    },
+    onTouchMove: e => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        const scale = d / pinchRef.current;
+        setZoom(z => Math.max(0.15, Math.min(3, z * scale)));
+        pinchRef.current = d;
+        e.preventDefault();
+        return;
+      }
+      handleMouseMove({
+        clientX: e.touches[0].clientX,
+        clientY: e.touches[0].clientY
+      });
+    },
+    onTouchEnd: e => {
+      pinchRef.current = null;
+      handleMouseUp();
+    },
+    onWheel: e => {
+      e.preventDefault();
+      setZoom(z => Math.max(0.15, Math.min(3, z + (e.deltaY < 0 ? 0.08 : -0.08))));
+    },
+    style: {
+      cursor: tool === "select" ? dragging ? "grabbing" : panning ? "move" : "default" : tool === "wire" ? "crosshair" : "pointer",
+      touchAction: "none"
+    }
+  }, (() => {
+    const gs = zoom < 0.4 ? 40 : zoom < 0.8 ? 30 : zoom > 2 ? 10 : 20;
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("pattern", {
+      id: "sgrid",
+      width: gs,
+      height: gs,
+      patternUnits: "userSpaceOnUse"
+    }, /*#__PURE__*/React.createElement("circle", {
+      cx: gs / 2,
+      cy: gs / 2,
+      r: zoom < 0.5 ? 0.3 : 0.5,
+      fill: "#1e293b"
+    }))), /*#__PURE__*/React.createElement("rect", {
+      x: -pan.x,
+      y: -pan.y,
+      width: 10000,
+      height: 10000,
+      fill: "url(#sgrid)"
+    }));
+  })(), renderWires(), renderNodes(), renderWirePreview(), hoverPin && (() => {
+    const n = nodes.find(nn => nn.id === hoverPin.nodeId);
+    if (!n) return null;
+    const pp = getPinPos(n, hoverPin.side, hoverPin.idx);
+    return /*#__PURE__*/React.createElement("g", null, /*#__PURE__*/React.createElement("circle", {
+      cx: pp.x,
+      cy: pp.y,
+      r: 8,
+      fill: "none",
+      stroke: "#fff",
+      strokeWidth: 1.5,
+      opacity: 0.6
+    }), /*#__PURE__*/React.createElement("rect", {
+      x: pp.x + (hoverPin.side === "L" ? -90 : 10),
+      y: pp.y - 10,
+      width: 80,
+      height: 18,
+      rx: 4,
+      fill: "#0c0c14",
+      stroke: "#334155",
+      strokeWidth: 1,
+      opacity: 0.9
+    }), /*#__PURE__*/React.createElement("text", {
+      x: pp.x + (hoverPin.side === "L" ? -50 : 50),
+      y: pp.y + 3,
+      textAnchor: "middle",
+      fontSize: 8,
+      fill: "#e2e8f0",
+      fontFamily: "monospace"
+    }, hoverPin.pin));
+  })()), /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: "#0f172aee",
+      borderTop: "1px solid #1e293b",
+      padding: "3px 12px",
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 9,
+      color: "#64748b",
+      zIndex: 5
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDD27 ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#3b82f6"
+    }
+  }, tool === "select" ? "Selecionar" : tool === "wire" ? "Ligar pinos" : "Borracha"), wireStart ? " → clique no 2º pino" : ""), /*#__PURE__*/React.createElement("span", null, wireMode === "lines" ? "━ Linhas" : "🏷 Tags", " \xB7 ", nodes.length, " comp. \xB7 ", wires.length, " fios"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#f59e0b"
+    }
+  }, projectName)))), showSaveModal && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowSaveModal(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#e2e8f0"
+    }
+  }, "\uD83D\uDCBE Guardar como")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: projectName,
+    onChange: e => setProjectName(e.target.value),
+    style: {
+      ...inputS,
+      fontSize: 13,
+      padding: "8px",
+      fontWeight: 600,
+      color: "#f59e0b"
+    },
+    autoFocus: true,
+    onKeyDown: e => {
+      if (e.key === "Enter") saveToStorage();
+    }
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      borderTop: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowSaveModal(false),
+    style: {
+      ...btn(false),
+      width: "auto",
+      padding: "5px 14px"
+    }
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => saveToStorage(),
+    style: {
+      ...btn(true),
+      width: "auto",
+      padding: "5px 14px",
+      fontWeight: 700
+    }
+  }, "\uD83D\uDCBE Guardar"))), showLoadModal && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => {
+      setShowLoadModal(false);
+      setConfirmDelete(null);
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "space-between"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#e2e8f0"
+    }
+  }, "\uD83D\uDCC2 Abrir projeto"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowLoadModal(false),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#94a3b8",
+      cursor: "pointer",
+      fontSize: 14
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      maxHeight: "50vh",
+      overflowY: "auto"
+    }
+  }, loadingProjects ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 16,
+      textAlign: "center",
+      color: "#64748b"
+    }
+  }, "A carregar...") : savedProjects.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: 16,
+      textAlign: "center",
+      color: "#64748b",
+      fontSize: 10
+    }
+  }, "Nenhum projeto guardado.") : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4
+    }
+  }, savedProjects.map(p => /*#__PURE__*/React.createElement("div", {
+    key: p.key,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "6px 8px",
+      borderRadius: 5,
+      border: "1px solid #1e293b",
+      background: "#0c0c14",
+      cursor: "pointer"
+    },
+    onMouseEnter: e => e.currentTarget.style.borderColor = "#3b82f6",
+    onMouseLeave: e => e.currentTarget.style.borderColor = "#1e293b"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    },
+    onClick: () => loadFromStorage(p.key)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 600,
+      color: "#e2e8f0"
+    }
+  }, p.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "#64748b"
+    }
+  }, p.count, " comp. \xB7 ", p.wcount, " fios \xB7 ", p.savedAt ? new Date(p.savedAt).toLocaleString("pt-PT") : "—")), confirmDelete === p.key ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 3
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      await store.del(p.key);
+      loadProjectList();
+      setConfirmDelete(null);
+    },
+    style: {
+      ...btn(false, "#ef4444"),
+      width: "auto",
+      fontSize: 8,
+      padding: "2px 6px"
+    }
+  }, "Sim"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConfirmDelete(null),
+    style: {
+      ...btn(false),
+      width: "auto",
+      fontSize: 8,
+      padding: "2px 6px"
+    }
+  }, "N\xE3o")) : /*#__PURE__*/React.createElement("button", {
+    onClick: () => setConfirmDelete(p.key),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#555",
+      cursor: "pointer",
+      fontSize: 12
+    }
+  }, "\uD83D\uDDD1")))))), showAddComp && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowAddComp(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "space-between"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: "#e2e8f0"
+    }
+  }, "+ Adicionar Componente"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowAddComp(false),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#94a3b8",
+      cursor: "pointer",
+      fontSize: 14
+    }
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      maxHeight: "60vh",
+      overflowY: "auto"
+    }
+  }, categories.map(cat => /*#__PURE__*/React.createElement("div", {
+    key: cat,
+    style: {
+      marginBottom: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      fontWeight: 700,
+      color: "#3b82f6",
+      marginBottom: 3,
+      letterSpacing: 1
+    }
+  }, cat.toUpperCase()), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(2,1fr)",
+      gap: 4
+    }
+  }, allLib.filter(l => l.cat === cat).map(l => /*#__PURE__*/React.createElement("button", {
+    key: l.id,
+    onClick: () => addNodeFromLib(l),
+    style: {
+      padding: "6px 8px",
+      borderRadius: 4,
+      border: "1px solid #1e293b",
+      background: "#0c0c14",
+      color: "#e2e8f0",
+      cursor: "pointer",
+      textAlign: "left",
+      fontFamily: "inherit",
+      fontSize: 9
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      marginBottom: 2
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: 2,
+      background: l.color,
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 600
+    }
+  }, l.name)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 7,
+      color: "#64748b"
+    }
+  }, (l.pinsL || []).length, "L + ", (l.pinsR || []).length, "R pinos"), (customComps.find(c => c.id === l.id) || customMCUs.find(c => c.id === l.id)) && /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.stopPropagation();
+      const isM = customMCUs.find(c => c.id === l.id);
+      if (isM) saveCustomMCUs(customMCUs.filter(c => c.id !== l.id));else saveCustomComps(customComps.filter(c => c.id !== l.id));
+    },
+    style: {
+      fontSize: 7,
+      color: "#ef4444",
+      background: "none",
+      border: "none",
+      cursor: "pointer"
+    }
+  }, "apagar")))))))), showCreator && /*#__PURE__*/React.createElement(Modal, {
+    onClose: () => setShowCreator(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      borderBottom: "1px solid #1e3a5f"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: creatorType === "mcu" ? "#8b5cf6" : "#f39c12"
+    }
+  }, "\u271A Criar ", creatorType === "mcu" ? "MCU / Placa" : "Componente")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "12px 16px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "NOME"), /*#__PURE__*/React.createElement("input", {
+    value: crName,
+    onChange: e => setCrName(e.target.value),
+    placeholder: "Ex: XIAO nRF52840",
+    style: inputS
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 80
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "COR"), /*#__PURE__*/React.createElement("input", {
+    type: "color",
+    value: crColor,
+    onChange: e => setCrColor(e.target.value),
+    style: {
+      width: "100%",
+      height: 28,
+      border: "1px solid #334155",
+      borderRadius: 3,
+      cursor: "pointer"
+    }
+  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      marginBottom: 2
+    }
+  }, "CATEGORIA"), /*#__PURE__*/React.createElement("input", {
+    value: crCat,
+    onChange: e => setCrCat(e.target.value),
+    style: inputS
+  })), ["L", "R"].map(side => /*#__PURE__*/React.createElement("div", {
+    key: side
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 9,
+      color: "#64748b",
+      fontWeight: 700
+    }
+  }, "PINOS ", side === "L" ? "ESQUERDOS" : "DIREITOS"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => addPinToCreator(side),
+    style: {
+      ...btn(false, "#22c55e"),
+      width: "auto",
+      padding: "2px 8px",
+      fontSize: 8
+    }
+  }, "+ Pino")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      maxHeight: 200,
+      overflowY: "auto"
+    }
+  }, (side === "L" ? crPinsL : crPinsR).map((p, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      gap: 3,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    value: p,
+    onChange: e => updateCreatorPin(side, i, e.target.value),
+    style: {
+      ...inputS,
+      flex: 1,
+      padding: "2px 4px",
+      fontSize: 10
+    }
+  }), /*#__PURE__*/React.createElement("select", {
+    value: (side === "L" ? crPinsLTypes : crPinsRTypes)[i] || "digital",
+    onChange: e => updateCreatorPinType(side, i, e.target.value),
+    style: {
+      ...inputS,
+      width: 80,
+      padding: "2px",
+      fontSize: 8
+    }
+  }, PIN_TYPES.map(pt => /*#__PURE__*/React.createElement("option", {
+    key: pt.id,
+    value: pt.id
+  }, pt.label))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removePinFromCreator(side, i),
+    style: {
+      background: "none",
+      border: "none",
+      color: "#ef4444",
+      cursor: "pointer",
+      fontSize: 12
+    }
+  }, "\u2715"))))))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: "10px 16px",
+      borderTop: "1px solid #1e3a5f",
+      display: "flex",
+      justifyContent: "flex-end",
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowCreator(false),
+    style: {
+      ...btn(false),
+      width: "auto",
+      padding: "5px 14px"
+    }
+  }, "Cancelar"), /*#__PURE__*/React.createElement("button", {
+    onClick: saveCreatedComp,
+    style: {
+      ...btn(true),
+      width: "auto",
+      padding: "5px 14px",
+      fontWeight: 700
+    }
+  }, "\uD83D\uDCBE Guardar"))), showPinEditor && (() => {
+    const editNode = nodes.find(n => n.id === showPinEditor);
+    if (!editNode) return null;
+    return /*#__PURE__*/React.createElement(Modal, {
+      onClose: () => setShowPinEditor(null)
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "12px 16px",
+        borderBottom: "1px solid #1e3a5f"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 700,
+        color: "#8b5cf6"
+      }
+    }, "\u270F\uFE0F Editar Pinos \u2014 ", editNode.name)), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "12px 16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8
+      }
+    }, ["L", "R"].map(side => /*#__PURE__*/React.createElement("div", {
+      key: side
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#64748b",
+        fontWeight: 700
+      }
+    }, "PINOS ", side === "L" ? "ESQUERDOS" : "DIREITOS"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        pushHistory();
+        setNodes(ns => ns.map(n => {
+          if (n.id !== showPinEditor) return n;
+          const nc = {
+            ...n
+          };
+          if (side === "L") {
+            nc.pinsL = [...(nc.pinsL || []), "Pino"];
+            nc.pinsLTypes = [...(nc.pinsLTypes || []), "digital"];
+          } else {
+            nc.pinsR = [...(nc.pinsR || []), "Pino"];
+            nc.pinsRTypes = [...(nc.pinsRTypes || []), "digital"];
+          }
+          return nc;
+        }));
+      },
+      style: {
+        ...btn(false, "#22c55e"),
+        width: "auto",
+        padding: "2px 8px",
+        fontSize: 8
+      }
+    }, "+ Pino")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        maxHeight: 200,
+        overflowY: "auto"
+      }
+    }, (side === "L" ? editNode.pinsL : editNode.pinsR || []).map((p, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      style: {
+        display: "flex",
+        gap: 3,
+        alignItems: "center"
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      value: p,
+      onChange: e => {
+        const val = e.target.value;
+        setNodes(ns => ns.map(n => {
+          if (n.id !== showPinEditor) return n;
+          const nc = {
+            ...n
+          };
+          if (side === "L") nc.pinsL = nc.pinsL.map((v, j) => j === i ? val : v);else nc.pinsR = (nc.pinsR || []).map((v, j) => j === i ? val : v);
+          return nc;
+        }));
+      },
+      style: {
+        ...inputS,
+        flex: 1,
+        padding: "2px 4px",
+        fontSize: 10
+      }
+    }), /*#__PURE__*/React.createElement("select", {
+      value: (side === "L" ? editNode.pinsLTypes : editNode.pinsRTypes || [])[i] || "digital",
+      onChange: e => {
+        const val = e.target.value;
+        setNodes(ns => ns.map(n => {
+          if (n.id !== showPinEditor) return n;
+          const nc = {
+            ...n
+          };
+          if (side === "L") nc.pinsLTypes = (nc.pinsLTypes || []).map((v, j) => j === i ? val : v);else nc.pinsRTypes = (nc.pinsRTypes || []).map((v, j) => j === i ? val : v);
+          return nc;
+        }));
+      },
+      style: {
+        ...inputS,
+        width: 80,
+        padding: "2px",
+        fontSize: 8
+      }
+    }, PIN_TYPES.map(pt => /*#__PURE__*/React.createElement("option", {
+      key: pt.id,
+      value: pt.id
+    }, pt.label))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        pushHistory();
+        setNodes(ns => ns.map(n => {
+          if (n.id !== showPinEditor) return n;
+          const nc = {
+            ...n
+          };
+          if (side === "L") {
+            nc.pinsL = nc.pinsL.filter((_, j) => j !== i);
+            nc.pinsLTypes = (nc.pinsLTypes || []).filter((_, j) => j !== i);
+          } else {
+            nc.pinsR = (nc.pinsR || []).filter((_, j) => j !== i);
+            nc.pinsRTypes = (nc.pinsRTypes || []).filter((_, j) => j !== i);
+          }
+          return nc;
+        }));
+      },
+      style: {
+        background: "none",
+        border: "none",
+        color: "#ef4444",
+        cursor: "pointer",
+        fontSize: 12
+      }
+    }, "\u2715"))))))), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: "10px 16px",
+        borderTop: "1px solid #1e3a5f",
+        display: "flex",
+        justifyContent: "flex-end"
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowPinEditor(null),
+      style: {
+        ...btn(true),
+        width: "auto",
+        padding: "5px 14px",
+        fontWeight: 700
+      }
+    }, "\u2713 Fechar")));
+  })());
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SchematicDesigner));
+</script></body></html>
