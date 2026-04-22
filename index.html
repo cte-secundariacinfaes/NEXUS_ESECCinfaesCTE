@@ -77,6 +77,33 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .nav-card.aluno{border-left:4px solid var(--green)}
 
 .tools-section{max-width:420px;margin:16px auto 0;padding:0 20px}
+.tools-panel{background:var(--card);border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.04);
+  border:1.5px solid var(--border);overflow:hidden}
+.tools-btn{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;
+  list-style:none;transition:.2s;user-select:none}
+.tools-btn:hover{background:#F8FAFC}
+.tools-btn::-webkit-details-marker{display:none}
+.tools-btn-icon{font-size:1.4rem}
+.tools-btn-text{flex:1;font-size:.92rem;font-weight:800;color:var(--navy)}
+.tools-btn-arrow{font-size:.7rem;color:var(--muted);transition:.2s}
+.tools-panel[open] .tools-btn-arrow{transform:rotate(90deg)}
+.tools-panel[open] .tools-btn{border-bottom:1px solid var(--border)}
+.tools-grid{padding:10px}
+.tool-item{background:#F8FAFC;border-radius:10px;padding:12px 14px;margin-bottom:8px;
+  border-left:3px solid #22c55e;transition:.15s}
+.tool-item:last-child{margin-bottom:0}
+.tool-item:hover{background:#EFF6FF}
+.tool-item-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tool-item-name{font-size:.85rem;font-weight:800;color:var(--navy)}
+.tool-item-desc{font-size:.72rem;color:var(--muted);margin-top:1px}
+.tool-item-actions{display:flex;gap:6px}
+.tool-action{display:inline-block;padding:5px 12px;border-radius:6px;font-size:.75rem;
+  font-weight:700;text-decoration:none;transition:.15s}
+.tool-action-go{background:var(--navy);color:#fff}
+.tool-action-go:hover{background:var(--accent)}
+.tool-action-doc{background:#F1F5F9;color:var(--accent);border:1px solid var(--border)}
+.tool-action-doc:hover{background:#EFF6FF}
+
 .tool-card{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:14px;
   padding:16px 18px;text-decoration:none;color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,.04);
   border:1.5px solid var(--border);transition:.2s}
@@ -87,11 +114,15 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 .tool-desc{font-size:.75rem;color:var(--muted);margin-top:2px}
 
 .setup-section{max-width:420px;margin:20px auto 0;padding:0 20px}
-.setup-card{background:var(--card);border-radius:14px;padding:18px 20px;box-shadow:0 1px 8px rgba(0,0,0,.04)}
-.setup-card summary{font-size:.88rem;font-weight:700;color:var(--navy);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px}
-.setup-card summary::before{content:'▶';font-size:.7rem;transition:.2s;display:inline-block}
-.setup-card[open] summary::before{transform:rotate(90deg)}
-.setup-card .steps{counter-reset:step;margin-top:12px}
+.setup-card{background:var(--card);border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.04);
+  border:1.5px solid var(--border);overflow:hidden}
+.setup-card summary{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;
+  list-style:none;transition:.2s;user-select:none}
+.setup-card summary:hover{background:#F8FAFC}
+.setup-card summary::-webkit-details-marker{display:none}
+.setup-card[open] summary{border-bottom:1px solid var(--border)}
+.setup-card[open] .tools-btn-arrow{transform:rotate(90deg)}
+.setup-card .steps{counter-reset:step;padding:10px 18px 14px}
 .setup-card .step{counter-increment:step;padding:6px 0 6px 36px;position:relative;
   font-size:.82rem;color:var(--muted);line-height:1.6;border-left:2px solid #E2E8F0;margin-left:12px}
 .setup-card .step::before{content:counter(step);position:absolute;left:-13px;top:4px;
@@ -167,30 +198,63 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(-
 
 <!-- ═══ TOOLS ═══ -->
 <div class="tools-section">
-  <a class="tool-card" href="Nexus_ESECCinfaesCTE_Perfboard.html">
-    <div class="tool-icon">⊞</div>
-    <div class="tool-info">
-      <div class="tool-title">Perfboard Designer</div>
-      <div class="tool-desc">Projetar ligações em placas PCB e breadboards</div>
+  <details class="tools-panel" id="tools-panel">
+    <summary class="tools-btn">
+      <span class="tools-btn-icon">🔧</span>
+      <span class="tools-btn-text">Software de Apoio</span>
+      <span class="tools-btn-arrow">▶</span>
+    </summary>
+    <div class="tools-grid">
+      <div class="tool-item">
+        <div class="tool-item-header">
+          <span style="font-size:1.3rem">⊞</span>
+          <div>
+            <div class="tool-item-name">Perfboard Designer</div>
+            <div class="tool-item-desc">Projetar ligações em placas PCB e breadboards</div>
+          </div>
+        </div>
+        <div class="tool-item-actions">
+          <a href="Nexus_ESECCinfaesCTE_Perfboard.html" class="tool-action tool-action-go">▶ Abrir</a>
+          <a href="Nexus_ESECCinfaesCTE_Manual_Perfboard.html" class="tool-action tool-action-doc">📖 Manual</a>
+        </div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-item-header">
+          <span style="font-size:1.3rem">🔌</span>
+          <div>
+            <div class="tool-item-name">Esquemas de Ligação</div>
+            <div class="tool-item-desc">Diagramas de cablagem, pinagem, tabela e BOM</div>
+          </div>
+        </div>
+        <div class="tool-item-actions">
+          <a href="Nexus_ESECCinfaesCTE_Esquemas.html" class="tool-action tool-action-go">▶ Abrir</a>
+          <a href="Nexus_ESECCinfaesCTE_Manual_Esquemas.html" class="tool-action tool-action-doc">📖 Manual</a>
+        </div>
+      </div>
+      <div class="tool-item" style="border-left-color:#7C3AED">
+        <div class="tool-item-header">
+          <span style="font-size:1.3rem">📡</span>
+          <div>
+            <div class="tool-item-name">Terminal RFID ESP32</div>
+            <div class="tool-item-desc">Guia de montagem e firmware do terminal de presenças</div>
+          </div>
+        </div>
+        <div class="tool-item-actions">
+          <a href="Nexus_ESECCinfaesCTE_ESP32_RFID.html" class="tool-action tool-action-go">▶ Abrir Guia</a>
+        </div>
+      </div>
     </div>
-  </a>
-</div>
-
-<!-- ═══ TOOLS: ESP32 ═══ -->
-<div class="tools-section" style="margin-top:10px">
-  <a class="tool-card" href="Nexus_ESECCinfaesCTE_ESP32_RFID.html" style="border-color:#7C3AED">
-    <div class="tool-icon">🔌</div>
-    <div class="tool-info">
-      <div class="tool-title">Terminal RFID ESP32</div>
-      <div class="tool-desc">Guia de montagem, firmware e configuração do terminal de presenças por cartão</div>
-    </div>
-  </a>
+  </details>
 </div>
 
 <!-- ═══ SETUP ═══ -->
 <div class="setup-section">
   <details class="setup-card">
-    <summary>🚀 Configuração Inicial</summary>
+    <summary>
+      <span class="tools-btn-icon">🚀</span>
+      <span class="tools-btn-text">Configuração Inicial</span>
+      <span class="tools-btn-arrow">▶</span>
+    </summary>
     <div class="steps">
       <div class="step">Cria dois <strong>Google Sheets</strong>: um <strong>Mestre</strong> (utilizadores) e um por <strong>Turma</strong> (dados)</div>
       <div class="step">Em cada Sheets: <code>Extensões → Apps Script</code> → cola o código correspondente (<code>Code_Mestre.gs</code> ou <code>Code.gs</code>)</div>
@@ -229,7 +293,7 @@ var MESTRE_URL_KEY = 'nexus_mestre_url';
 // ── HARDCODE: after deploying the Mestre Apps Script, paste the URL here ──
 // Once set, no one needs to configure anything — just open index.html.
 // Leave empty ('') to use localStorage fallback.
-var HARDCODED_MESTRE_URL = '';
+var HARDCODED_MESTRE_URL = 'https://script.google.com/macros/s/AKfycbyKY7oHWdkkkmrPElA9zXQRjF9NRGETWZioDt_pV0WkYi0jfjf2fva4Ta0fwEz26Nx4/exec';
 // ── Security token — must match Code_Mestre.gs and Code.gs ──
 var API_TOKEN = 'nexus_eac_2026_token';
 var SESSION_KEY    = 'nexus_session';
@@ -346,7 +410,8 @@ function showLoggedIn(s){
   } else {
     cards.innerHTML =
       '<a class="nav-card aluno" href="Nexus_ESECCinfaesCTE_Aluno.html"><div class="nc-icon">🎓</div><div class="nc-title">Entrar</div><div class="nc-desc">' + (s.turma||'') + '</div></a>' +
-      '<a class="nav-card" href="Nexus_ESECCinfaesCTE_Perfboard.html"><div class="nc-icon">⊞</div><div class="nc-title">Perfboard</div><div class="nc-desc">Designer de PCBs</div></a>';
+      '<a class="nav-card" href="Nexus_ESECCinfaesCTE_Perfboard.html"><div class="nc-icon">⊞</div><div class="nc-title">Perfboard</div><div class="nc-desc">Designer PCBs</div></a>' +
+      '<a class="nav-card" href="Nexus_ESECCinfaesCTE_Esquemas.html"><div class="nc-icon">🔌</div><div class="nc-title">Esquemas</div><div class="nc-desc">Diagramas de cablagem</div></a>';
   }
 }
 
