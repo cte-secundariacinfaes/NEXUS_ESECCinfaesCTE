@@ -5,17 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Perfboard Designer — PCB Layout Tool</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2322c55e'/><text x='16' y='22' text-anchor='middle' font-size='18' font-weight='900' fill='%23000'>⊞</text></svg>">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body, #root { height: 100%; width: 100%; overflow: hidden; }
-  body { background: #0c0c14; }
-</style>
+<style>*{box-sizing:border-box;margin:0;padding:0}html,body,#root{height:100%;width:100%;overflow:hidden}body{background:#0c0c14}</style>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-</head>
-<body>
-<div id="root"></div>
-<script>
+</head><body><div id="root"></div><script>
 const {
   useState,
   useRef,
@@ -1083,7 +1076,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
           boardIdx: d.boardIdx,
           count: d.components?.length || 0
         });
-      } catch {}
+      } catch (e) {}
     }
     setSavedProjects(projects.sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || "")));
     setLoadingProjects(false);
@@ -1152,7 +1145,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus(null), 1500);
         }
-      } catch {
+      } catch (e) {
         alert("Ficheiro inválido.");
       }
     };
@@ -1241,6 +1234,10 @@ const PerfboardDesigner = function PerfboardDesigner() {
     if (tool === "rail") {
       if (!wireStart) {
         setWireStart(h);
+        setHoleColors(hc => ({
+          ...hc,
+          [hk(h.r, h.c)]: color
+        }));
       } else {
         if (wireStart.r === h.r && wireStart.c === h.c) {
           setWireStart(null);
@@ -3521,7 +3518,7 @@ const PerfboardDesigner = function PerfboardDesigner() {
             boardIdx: d.boardIdx,
             count: d.components?.length || 0
           });
-        } catch {}
+        } catch (e) {}
       }
       setSavedProjects(prjs);
       setConfirmDelete(null);
@@ -4144,6 +4141,4 @@ const PerfboardDesigner = function PerfboardDesigner() {
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(PerfboardDesigner));
-</script>
-</body>
-</html>
+</script></body></html>
