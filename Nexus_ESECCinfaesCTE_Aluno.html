@@ -2,6 +2,8 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexus ESECCinfãesCTE — Aluno</title>
 <style>
@@ -15,7 +17,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);
   color:#1E293B;min-height:100vh;font-size:15px}
 
 /* ── TOPBAR ── */
@@ -509,6 +511,8 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba
 .sheets-setup-card p{font-size:.78rem;opacity:.8;line-height:1.6;margin-bottom:14px}
 .sheets-steps{font-size:.75rem;opacity:.8;line-height:2.2;margin-bottom:14px;
   background:rgba(255,255,255,.08);border-radius:10px;padding:10px 14px}
+details.sheets-setup-card[open] .adv-arrow{transform:rotate(90deg)}
+details.sheets-setup-card summary::-webkit-details-marker{display:none}
 .sheets-url-row{display:flex;gap:8px;flex-wrap:wrap}
 .sheets-url-row input{flex:1;min-width:200px;padding:10px 13px;border-radius:9px;
   border:2px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);
@@ -546,6 +550,15 @@ textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba
 /* ═══════════════════════════════════════════════════════
    AUTOAVALIAÇÃO
 ═══════════════════════════════════════════════════════ */
+.tc-sig-area{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.tc-sig-label{font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:6px}
+.tc-sig-wrap{position:relative;border:2px dashed var(--border);border-radius:10px;background:#FAFBFC;overflow:hidden;touch-action:none}
+.tc-sig-wrap.signing{border-color:var(--accent);border-style:solid}
+.tc-sig-canvas{display:block;width:100%;cursor:crosshair}
+.tc-sig-actions{display:flex;gap:6px;margin-top:6px;align-items:center}
+.tc-sig-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--muted);font-size:.82rem;pointer-events:none;opacity:.6}
+.tc-sig-wrap.has-sig .tc-sig-hint{display:none}
+
 .autoav-disc-card{background:var(--card);border-radius:16px;padding:18px;
   width:100%;max-width:340px;cursor:pointer;transition:.2s;
   border:2px solid var(--border);text-align:center;box-shadow:var(--shadow)}
@@ -3239,7 +3252,11 @@ function printOrder(){
     <h2>Ordem de Apresentação</h2>
     <ol>${s.drawOrder.map(id=>{const g=s.groups.find(x=>x.id===id);
       return`<li><b>${g.name}</b><br><small>${g.title}</small></li>`;}).join('')}</ol>
-  </body></html>`);
+  <div style="text-align:center;padding:20px 16px;margin-top:24px;border-top:1.5px solid var(--border);color:var(--muted);font-size:.75rem;line-height:1.8">
+  <p>Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC</p>
+  <p>Desenvolvido por Avelino A. Colaço</p>
+</div>
+</body></html>`);
   w.document.close(); w.print();
 }
 
@@ -4862,6 +4879,8 @@ function renderConhecimentoView(){
   var sess = getNexusSession();
   var nomeAluno = sess ? sess.nome : '';
 
+  setTimeout(tcInitAllSigPads, 100);
+
   el.innerHTML = visible.map(function(cfg){
     var key = (nomeAluno||'')+'|'+(cfg.ufcd||cfg.disciplina||cfg.id);
     var isDone = done.indexOf(key) >= 0;
@@ -4898,21 +4917,128 @@ function renderConhecimentoView(){
         '</div>'+
       '</details>'+
       // Sign button
-      (!isDone ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'+
-        '<label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer">'+
+      (!isDone ? '<div class="tc-sig-area">'+
+        '<label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer;margin-bottom:8px">'+
           '<input type="checkbox" data-tcid="'+escHtml(cfg.id||'')+'" class="tc-checkbox" style="width:16px;height:16px">'+
           '<span>Li e tomei conhecimento dos critérios de avaliação e planificações desta UFCD</span>'+
         '</label>'+
-        '<button class="btn btn-primary btn-sm" data-tcid="'+escHtml(cfg.id||'')+'" data-tckey="'+escHtml(cfg.ufcd||cfg.disciplina||'')+'" onclick="tcSign(this.dataset.tcid,this.dataset.tckey)">✅ Assinar</button>'+
+        '<div class="tc-sig-label">✍️ Assinatura:</div>'+
+        '<div class="tc-sig-wrap" id="tc-sig-wrap-'+escHtml(cfg.id||'')+'">'+
+          '<canvas class="tc-sig-canvas" data-tcid="'+escHtml(cfg.id||'')+'" width="400" height="120"></canvas>'+
+          '<div class="tc-sig-hint">Assina aqui com o dedo ou rato</div>'+
+        '</div>'+
+        '<div class="tc-sig-actions">'+
+          '<button class="btn btn-outline btn-sm" data-tcid="'+escHtml(cfg.id||'')+'" onclick="tcClearSig(this.dataset.tcid)">↺ Limpar</button>'+
+          '<button class="btn btn-primary btn-sm" data-tcid="'+escHtml(cfg.id||'')+'" data-tckey="'+escHtml(cfg.ufcd||cfg.disciplina||'')+'" onclick="tcSign(this.dataset.tcid,this.dataset.tckey)">✅ Assinar</button>'+
+        '</div>'+
       '</div>' : '')+
     '</div>';
   }).join('');
+}
+
+
+
+// ── SIGNATURE PAD ───────────────────────────────────────────────────
+var _tcSigData = {};
+
+function tcInitSigPad(canvas){
+  if(!canvas || canvas._sigInit) return;
+  canvas._sigInit = true;
+  var ctx = canvas.getContext('2d');
+  var drawing = false;
+  var wrap = canvas.parentElement;
+  var cfgId = canvas.dataset.tcid;
+
+  function resize(){
+    var rect = wrap.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width);
+    canvas.height = 120;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  ctx.strokeStyle = '#1B3A6B';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  function getPos(e){
+    var rect = canvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  }
+
+  function startDraw(e){
+    e.preventDefault();
+    drawing = true;
+    wrap.classList.add('signing');
+    var pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function draw(e){
+    if(!drawing) return;
+    e.preventDefault();
+    var pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    wrap.classList.add('has-sig');
+    _tcSigData[cfgId] = true;
+  }
+
+  function stopDraw(e){
+    if(!drawing) return;
+    drawing = false;
+    wrap.classList.remove('signing');
+  }
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDraw);
+  canvas.addEventListener('mouseleave', stopDraw);
+  canvas.addEventListener('touchstart', startDraw, {passive:false});
+  canvas.addEventListener('touchmove', draw, {passive:false});
+  canvas.addEventListener('touchend', stopDraw);
+  canvas.addEventListener('touchcancel', stopDraw);
+}
+
+function tcClearSig(cfgId){
+  var canvas = document.querySelector('.tc-sig-canvas[data-tcid="'+cfgId+'"]');
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var wrap = canvas.parentElement;
+  wrap.classList.remove('has-sig');
+  _tcSigData[cfgId] = false;
+}
+
+function tcGetSigDataUrl(cfgId){
+  var canvas = document.querySelector('.tc-sig-canvas[data-tcid="'+cfgId+'"]');
+  if(!canvas) return '';
+  var ctx = canvas.getContext('2d');
+  var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  var empty = true;
+  for(var i = 3; i < data.length; i += 4){
+    if(data[i] > 0){ empty = false; break; }
+  }
+  if(empty) return '';
+  return canvas.toDataURL('image/png');
+}
+
+function tcInitAllSigPads(){
+  document.querySelectorAll('.tc-sig-canvas').forEach(tcInitSigPad);
 }
 
 async function tcSign(cfgId, ufcdKey){
   var cb = document.querySelector('.tc-checkbox[data-tcid="'+cfgId+'"]');
   if(!cb || !cb.checked){
     toast('⚠️ Marca a checkbox para confirmar que leste os critérios.','warn');
+    return;
+  }
+  var sigUrl = tcGetSigDataUrl(cfgId);
+  if(!sigUrl){
+    toast('⚠️ Assina no campo de assinatura antes de submeter.','warn');
     return;
   }
   var sess = getNexusSession();
@@ -4945,7 +5071,8 @@ async function tcSign(cfgId, ufcdKey){
         ufcd: cfg ? (cfg.ufcd||'') : '',
         ano: cfg ? (cfg.ano||'') : '',
         anoLetivo: cfg ? (cfg.anoLetivo||'') : '',
-        docs: (cfg && cfg.links) ? cfg.links.map(function(l){return l.label;}).join(', ') : ''
+        docs: (cfg && cfg.links) ? cfg.links.map(function(l){return l.label;}).join(', ') : '',
+        assinatura: sigUrl ? 'SIM (digital)' : 'SIM'
       });
     }catch(e){}
   }
@@ -7561,7 +7688,11 @@ function aulasImprimirRelatorio(){
       📝 Relatório de Presenças — Aulas Práticas</h1>
     <p style="color:#64748B;font-size:12px;margin-bottom:20px">Gerado em ${new Date().toLocaleString('pt-PT')}</p>
     ${content}
-  </body></html>`);
+  <div style="text-align:center;padding:20px 16px;margin-top:24px;border-top:1.5px solid var(--border);color:var(--muted);font-size:.75rem;line-height:1.8">
+  <p>Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC</p>
+  <p>Desenvolvido por Avelino A. Colaço</p>
+</div>
+</body></html>`);
   w.document.close();
   setTimeout(()=>w.print(),500);
 }
@@ -8739,7 +8870,11 @@ function presImprimirRelatorio(){
       📍 Relatório de Presenças — Estágio</h1>
     <p style="color:#64748B;font-size:12px;margin-bottom:20px">Gerado em ${new Date().toLocaleString('pt-PT')}</p>
     ${content}
-  </body></html>`);
+  <div style="text-align:center;padding:20px 16px;margin-top:24px;border-top:1.5px solid var(--border);color:var(--muted);font-size:.75rem;line-height:1.8">
+  <p>Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC</p>
+  <p>Desenvolvido por Avelino A. Colaço</p>
+</div>
+</body></html>`);
   w.document.close();
   setTimeout(()=>w.print(), 500);
 }
@@ -8989,5 +9124,9 @@ function combinedWhatsApp(){
   window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(_combinedShortUrl||buildCombinedURL()),'_blank');
 }
 </script>
+<div style="text-align:center;padding:20px 16px;margin-top:24px;border-top:1.5px solid var(--border);color:var(--muted);font-size:.75rem;line-height:1.8">
+  <p>Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC</p>
+  <p>Desenvolvido por Avelino A. Colaço</p>
+</div>
 </body>
 </html>
