@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual — Perfboard Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --pcb:#1a6b3a; --pcb-light:#e8f5e8; --pcb-dark:#0f3d20;
+  --copper:#c9a84c; --copper-light:#f5ecd4;
+  --accent:#22c55e; --accent-light:#dcfce7;
+  --red:#dc2626; --amber:#d97706; --green:#059669; --blue:#3b82f6;
+  --bg:#f8faf8; --card:#fff; --text:#1e293b; --muted:#64748b; --border:#d4ddd4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var(--bg);line-height:1.75}
+
+@media print {
+  body{font-size:11px;line-height:1.5;background:#fff}
+  .no-print,.hero-bg,.toc{display:none!important}
+  .hero{min-height:auto!important;padding:20px!important}
+  section{break-inside:avoid;page-break-inside:avoid}
+  .card{box-shadow:none!important;border:1px solid #ddd}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:15mm}
+}
+
+.hero{position:relative;min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px 48px;overflow:hidden;background:linear-gradient(160deg,var(--pcb-dark) 0%,var(--pcb) 40%,#2a8a50 100%);color:#fff}
+.hero-bg{position:absolute;inset:0;opacity:0.06;background-image:radial-gradient(circle at 2px 2px, #fff 1px, transparent 1px);background-size:22px 22px}
+.hero h1{font-size:clamp(1.8rem,5vw,2.8rem);font-weight:800;line-height:1.15;letter-spacing:-0.02em;margin-bottom:8px;position:relative}
+.hero h1 span{color:var(--copper)}
+.hero .subtitle{font-size:clamp(0.9rem,2vw,1.1rem);opacity:0.8;max-width:600px;margin:0 auto 20px;font-weight:300}
+.hero .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 16px;font-size:0.8rem;font-weight:600;backdrop-filter:blur(4px)}
+.hero .print-btn{position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}
+.hero .print-btn:hover{background:rgba(255,255,255,0.25)}
+
+.toc{max-width:880px;margin:-28px auto 0;position:relative;z-index:1;background:var(--card);border-radius:14px;padding:24px 28px;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid var(--border)}
+.toc h2{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--pcb);margin-bottom:12px;font-weight:700}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+.toc a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.85rem;font-weight:500;transition:all 0.15s}
+.toc a:hover{background:var(--pcb-light);color:var(--pcb)}
+.toc a .num{min-width:22px;height:22px;border-radius:50%;background:var(--accent-light);color:var(--pcb);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700}
+
+.content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+section{margin-bottom:40px}
+section h2{font-size:1.4rem;font-weight:800;color:var(--pcb-dark);margin-bottom:6px;padding-bottom:8px;border-bottom:3px solid var(--accent);display:flex;align-items:center;gap:10px}
+section h2 .sec-num{background:var(--pcb);color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0}
+section h3{font-size:1.05rem;font-weight:700;color:var(--pcb);margin:20px 0 8px;display:flex;align-items:center;gap:6px}
+section h3::before{content:'';width:4px;height:18px;background:var(--copper);border-radius:2px;flex-shrink:0}
+p{margin-bottom:12px}
+
+.card{background:var(--card);border-radius:10px;padding:18px 20px;margin:14px 0;box-shadow:0 2px 12px rgba(0,0,0,0.04);border:1px solid var(--border)}
+.card.warning{border-left:4px solid var(--red);background:#fef2f2}
+.card.tip{border-left:4px solid var(--green);background:#f0fdf4}
+.card.info{border-left:4px solid var(--blue);background:#eff6ff}
+.card.copper{border-left:4px solid var(--copper);background:var(--copper-light)}
+.card-title{font-weight:700;font-size:0.92rem;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.card.warning .card-title{color:var(--red)}
+.card.tip .card-title{color:var(--green)}
+.card.info .card-title{color:var(--blue)}
+.card.copper .card-title{color:#8a6d1b}
+
+.steps{counter-reset:step;margin:12px 0}
+.step{counter-increment:step;padding:10px 0 10px 48px;position:relative;font-size:0.92rem;border-left:2px solid var(--border);margin-left:16px}
+.step:last-child{border-left-color:transparent}
+.step::before{content:counter(step);position:absolute;left:-15px;top:8px;width:30px;height:30px;border-radius:50%;background:var(--pcb);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700}
+.step strong{color:var(--pcb-dark)}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.88rem}
+th{background:var(--pcb);color:#fff;padding:8px 12px;text-align:left;font-weight:600;font-size:0.82rem}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:nth-child(even) td{background:#f5f8f5}
+td code{font-family:'JetBrains Mono',monospace;font-size:0.82rem;background:var(--pcb-light);padding:1px 5px;border-radius:3px;color:var(--pcb-dark)}
+
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:14px 0}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+
+.kbd{display:inline-block;background:#1e293b;color:#e2e8f0;padding:1px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;font-weight:600;border:1px solid #334155}
+.color-swatch{display:inline-flex;align-items:center;gap:5px;margin:2px 4px}
+.color-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(0,0,0,0.15);flex-shrink:0}
+
+.footer{max-width:880px;margin:0 auto;padding:20px 24px;text-align:center;color:var(--muted);font-size:0.78rem;border-top:2px solid var(--border)}
+.footer a{color:var(--pcb);text-decoration:none}
+
+@media(max-width:640px){
+  .hero{padding:40px 16px 36px}
+  .toc{margin:-20px 12px 0;padding:16px}
+  .content{padding:24px 14px 40px}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-bg"></div>
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir</button>
+  <h1>Manual de Utilização<br><span>Perfboard Designer</span></h1>
+  <p class="subtitle">Projetar layouts em placas perfuradas e breadboards — todas as ferramentas, funcionalidades e atalhos do software</p>
+  <div class="badge">⊞ Nexus ESECCinfaesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende</div>
+</div>
+
+<nav class="toc no-print">
+  <h2>Índice</h2>
+  <div class="toc-grid">
+    <a href="#s1"><span class="num">1</span> Introdução</a>
+    <a href="#s2"><span class="num">2</span> Interface do programa</a>
+    <a href="#s3"><span class="num">3</span> Placas disponíveis</a>
+    <a href="#s4"><span class="num">4</span> Ferramentas de desenho</a>
+    <a href="#s5"><span class="num">5</span> Ferramenta Barramento</a>
+    <a href="#s6"><span class="num">6</span> Biblioteca de componentes</a>
+    <a href="#s7"><span class="num">7</span> Criar componentes custom</a>
+    <a href="#s8"><span class="num">8</span> Edição e seleção</a>
+    <a href="#s9"><span class="num">9</span> Vistas e análise</a>
+    <a href="#s10"><span class="num">10</span> Guardar e abrir projetos</a>
+    <a href="#s11"><span class="num">11</span> Imprimir e exportar</a>
+    <a href="#s12"><span class="num">12</span> Atalhos de teclado</a>
+    <a href="#s13"><span class="num">13</span> Exemplo prático</a>
+  </div>
+</nav>
+
+<div class="content">
+
+<!-- ───────── 1 ───────── -->
+<section id="s1">
+  <h2><span class="sec-num">1</span> Introdução</h2>
+
+  <p>O <strong>Perfboard Designer</strong> é um software de layout para placas pré-perfuradas (perfboards) e breadboards. Permite planear a posição física dos componentes e as ligações entre furos antes de soldar — reduzindo erros e tempo de montagem.</p>
+
+  <h3>Para que serve?</h3>
+  <p>Este software responde à pergunta <em>"onde colocar cada componente e como ligar os furos?"</em>. O resultado é um esquema imprimível que o aluno leva para a bancada e segue ponto a ponto durante a soldadura.</p>
+
+  <h3>Características principais</h3>
+  <table>
+    <tr><th>Funcionalidade</th><th>Descrição</th></tr>
+    <tr><td>12 ferramentas de desenho</td><td>Fio, resistência, condensador, LED, díodo, IC, header, jumper, etiqueta, biblioteca, borracha, barramento</td></tr>
+    <tr><td>7 placas pré-definidas</td><td>5 perfboards ELEGOO + 2 breadboards, mais criador de placas custom</td></tr>
+    <tr><td>15 componentes na biblioteca</td><td>DIP-8/14/16/28, Arduino Nano/UNO, ESP32, relé, 7805, potenciómetro, botão, OLED, cristal, SIP</td></tr>
+    <tr><td>Vista dual frente/verso</td><td>Ver simultaneamente o lado dos componentes e o lado do cobre (espelhado)</td></tr>
+    <tr><td>Deteção de nets e conflitos</td><td>Visualizar redes elétricas e alertas de curto-circuito</td></tr>
+    <tr><td>Impressão A4</td><td>Esquema visual + tabela de ligações + BOM + espaço para notas</td></tr>
+    <tr><td>100% browser</td><td>Sem instalação — funciona no GitHub Pages, guarda em localStorage</td></tr>
+  </table>
+</section>
+
+<!-- ───────── 2 ───────── -->
+<section id="s2">
+  <h2><span class="sec-num">2</span> Interface do Programa</h2>
+
+  <h3>Barra superior (header)</h3>
+  <p>Contém o nome do projeto (editável), botões de guardar/abrir/exportar, e os botões de seleção de placa. Clicar numa placa diferente muda o tamanho do canvas (pede confirmação se houver componentes). O botão <strong>"✚ Nova"</strong> permite criar placas personalizadas.</p>
+
+  <h3>Sidebar esquerda</h3>
+  <table>
+    <tr><th>Secção</th><th>Conteúdo</th></tr>
+    <tr><td>Ferramentas</td><td>12 ferramentas de desenho (fio, resistência, condensador, LED, díodo, IC, header, jumper, etiqueta, biblioteca, borracha, barramento)</td></tr>
+    <tr><td>Cor</td><td>Paleta de 10 cores para fios e etiquetas</td></tr>
+    <tr><td>Biblioteca</td><td>Abrir biblioteca de componentes, criar componente custom</td></tr>
+    <tr><td>Opções da ferramenta</td><td>Opções específicas da ferramenta ativa (largura do IC, comprimento do header, modo do barramento, etc.)</td></tr>
+    <tr><td>Edição</td><td>Selecionar, Desfazer, Refazer, Apagar seleção, Limpar tudo</td></tr>
+    <tr><td>Imprimir / Exportar</td><td>Imprimir esquema, descarregar HTML, SVG, PNG</td></tr>
+    <tr><td>Vista</td><td>Frente+Verso, Mostrar Nets, Alertas de conflito</td></tr>
+    <tr><td>Imagem de fundo</td><td>Carregar foto da placa real como referência, com opacidade ajustável</td></tr>
+  </table>
+
+  <h3>Canvas central</h3>
+  <p>A placa é representada como uma grelha de furos com coordenadas (A1, B2, C3...). Letras nas linhas, números nas colunas. Os componentes são colocados clicando nos furos. Suporta zoom (scroll do rato, pinch em tablet, botões +/−) e auto-ajuste ao tamanho da janela.</p>
+
+  <h3>Barra de estado (rodapé)</h3>
+  <p>Mostra a ferramenta ativa, coordenada do cursor (ex: <code>B5</code>), distância em furos e mm ao ligar dois pontos, nome do projeto, e estatísticas detalhadas (fios, passivos, integrados).</p>
+</section>
+
+<!-- ───────── 3 ───────── -->
+<section id="s3">
+  <h2><span class="sec-num">3</span> Placas Disponíveis</h2>
+
+  <h3>Perfboards pré-definidas</h3>
+  <table>
+    <tr><th>Placa</th><th>Furos (C×L)</th><th>Total</th><th>Uso típico</th></tr>
+    <tr><td>2×8 cm</td><td>30×7</td><td>210</td><td>Adaptadores, circuitos mínimos</td></tr>
+    <tr><td>3×7 cm</td><td>26×11</td><td>286</td><td>Filtros, amplificadores simples</td></tr>
+    <tr><td>4×6 cm</td><td>22×15</td><td>330</td><td>Projetos médios, shields</td></tr>
+    <tr><td>5×7 cm</td><td>26×19</td><td>494</td><td>Projetos completos (padrão)</td></tr>
+    <tr><td>7×9 cm</td><td>34×26</td><td>884</td><td>Sistemas complexos com MCU</td></tr>
+  </table>
+
+  <h3>Breadboards</h3>
+  <table>
+    <tr><th>Breadboard</th><th>Furos</th><th>Características</th></tr>
+    <tr><td>Half (meia)</td><td>30×14</td><td>2 rails de alimentação (cima/baixo), canal central, grupos de 5 furos ligados verticalmente</td></tr>
+    <tr><td>Full (inteira)</td><td>63×14</td><td>Mesmo layout, o dobro do comprimento</td></tr>
+  </table>
+
+  <p>Nas breadboards, os rails de alimentação são identificados com <strong>+</strong> (vermelho, VCC) e <strong>−</strong> (azul, GND). Os furos de cada coluna no corpo principal estão ligados verticalmente em grupos de 5, separados pelo canal central.</p>
+
+  <h3>Criar placa personalizada</h3>
+  <div class="steps">
+    <div class="step">Clicar em <strong>"✚ Nova"</strong> na barra superior</div>
+    <div class="step">Definir dimensões em <strong>centímetros</strong> (convertido automaticamente para furos) ou diretamente em <strong>número de furos</strong></div>
+    <div class="step">Escolher tipo: <strong>Perfboard</strong> (furos independentes) ou <strong>Breadboard</strong> (com rails e canal, mín. 6 linhas)</div>
+    <div class="step">Dar um nome (opcional) e clicar <strong>"✚ Criar placa"</strong></div>
+  </div>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Placas personalizadas ficam guardadas</div>
+    As placas criadas persistem no localStorage e aparecem na barra superior junto às pré-definidas. Ao exportar o projeto como ficheiro JSON, as placas custom são incluídas.
+  </div>
+</section>
+
+<!-- ───────── 4 ───────── -->
+<section id="s4">
+  <h2><span class="sec-num">4</span> Ferramentas de Desenho</h2>
+
+  <p>O programa tem 12 ferramentas, divididas em ferramentas de <strong>2 cliques</strong> (ponto de partida → ponto de chegada) e de <strong>1 clique</strong> (colocar no furo).</p>
+
+  <h3>Ferramentas de 2 cliques</h3>
+  <table>
+    <tr><th>Ferramenta</th><th>Ícone</th><th>Descrição</th><th>Visualização</th></tr>
+    <tr><td><strong>Fio</strong></td><td>━</td><td>Ligação elétrica ponto-a-ponto</td><td>Linha sólida colorida entre dois furos</td></tr>
+    <tr><td><strong>Resistência</strong></td><td>⏛</td><td>Componente de 2 terminais</td><td>Retângulo castanho com bandas de cor</td></tr>
+    <tr><td><strong>Condensador</strong></td><td>⊥</td><td>Componente de 2 terminais</td><td>Duas linhas paralelas azuis</td></tr>
+    <tr><td><strong>LED</strong></td><td>◐</td><td>2 terminais (ânodo/cátodo)</td><td>Círculo colorido (cor do fio selecionado)</td></tr>
+    <tr><td><strong>Díodo</strong></td><td>▷</td><td>2 terminais (ânodo/cátodo)</td><td>Triângulo preto</td></tr>
+    <tr><td><strong>Jumper</strong></td><td>⌒</td><td>Ponte aérea pelo lado de cima</td><td>Curva tracejada entre dois furos</td></tr>
+    <tr><td><strong>Barramento</strong></td><td>▬</td><td>Preencher linha/coluna inteira</td><td>Fios segmentados entre cada furo da linha</td></tr>
+  </table>
+
+  <p>Ao clicar no primeiro ponto, aparece um <strong>círculo pulsante</strong> a indicar que está à espera do segundo clique. A barra de estado mostra a coordenada de partida, a distância em furos e em milímetros. Para cancelar, premir <span class="kbd">Escape</span>.</p>
+
+  <h3>Ferramentas de 1 clique</h3>
+  <table>
+    <tr><th>Ferramenta</th><th>Ícone</th><th>Descrição</th><th>Opções na sidebar</th></tr>
+    <tr><td><strong>CI / IC</strong></td><td>▪</td><td>Circuito integrado retangular</td><td>Largura (L) e Altura (A) em furos. Pinos renderizados no topo e fundo.</td></tr>
+    <tr><td><strong>Header</strong></td><td>▥</td><td>Barra de pinos (connector)</td><td>Número de pinos e direção (H=horizontal, V=vertical). Verifica limites da placa.</td></tr>
+    <tr><td><strong>Etiqueta</strong></td><td>A</td><td>Texto livre na placa</td><td>Campo de texto para definir o conteúdo (ex: "R1=330Ω", "VCC", "GND").</td></tr>
+    <tr><td><strong>Biblioteca</strong></td><td>◫</td><td>Colocar componente da biblioteca</td><td>Abre o modal da biblioteca para selecionar. Verifica limites da placa.</td></tr>
+    <tr><td><strong>Borracha</strong></td><td>⌫</td><td>Apagar furos e componentes</td><td>Clique para apagar um componente ou furo. <strong>Arrastar</strong> para apagar uma área.</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 Borracha de área</div>
+    Ao arrastar com a borracha selecionada, todos os furos por onde o cursor passa são limpos. Ideal para apagar rapidamente secções da placa sem clicar furo a furo.
+  </div>
+</section>
+
+<!-- ───────── 5 ───────── -->
+<section id="s5">
+  <h2><span class="sec-num">5</span> Ferramenta Barramento</h2>
+
+  <p>O barramento preenche uma <strong>linha ou coluna inteira</strong> de fios com apenas dois cliques — ideal para rails de VCC, GND e sinais repetitivos.</p>
+
+  <h3>Como usar</h3>
+  <div class="steps">
+    <div class="step">Selecionar a ferramenta <strong>▬ Barramento</strong> na sidebar</div>
+    <div class="step">Escolher a <strong>cor</strong> — usar os atalhos rápidos <strong style="color:#e74c3c">VCC</strong> (vermelho), <strong style="color:#3498db">GND</strong> (azul) ou <strong style="color:#2ecc71">SIG</strong> (verde)</div>
+    <div class="step">Clicar no <strong>furo de início</strong> — aparece um preview dos furos que vão ser preenchidos</div>
+    <div class="step">Clicar no <strong>furo de fim</strong> — todos os furos entre os dois pontos ficam ligados</div>
+  </div>
+
+  <h3>Modos do barramento</h3>
+  <table>
+    <tr><th>Modo</th><th>Comportamento</th></tr>
+    <tr><td><strong>Auto</strong> (padrão)</td><td>Se os dois pontos estão na mesma linha → horizontal. Se na mesma coluna → vertical. Se em ambos → ligação em L.</td></tr>
+    <tr><td><strong>Linha →</strong></td><td>Força ligação horizontal (quando os pontos estão desalinhados, prioriza a linha)</td></tr>
+    <tr><td><strong>Coluna ↓</strong></td><td>Força ligação vertical</td></tr>
+  </table>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Alinhamento tem prioridade</div>
+    Se os dois pontos estão exatamente na mesma coluna, o barramento faz sempre vertical — mesmo que o modo esteja em "Linha". O modo só decide a direção quando os pontos estão em linha E coluna diferentes (ligação em L).
+  </div>
+</section>
+
+<!-- ───────── 6 ───────── -->
+<section id="s6">
+  <h2><span class="sec-num">6</span> Biblioteca de Componentes</h2>
+
+  <p>A biblioteca tem 15 componentes pré-definidos organizados por categoria. Cada componente ocupa uma área retangular com pinos nas posições corretas.</p>
+
+  <table>
+    <tr><th>Categoria</th><th>Componentes</th><th>Dimensões (L×A)</th></tr>
+    <tr><td>ICs</td><td>DIP-8, DIP-14, DIP-16, DIP-28</td><td>4×2, 7×2, 8×2, 14×2</td></tr>
+    <tr><td>MCU</td><td>Arduino Nano, Arduino UNO (Headers), ESP32 DevKit</td><td>15×2, 18×2, 19×2</td></tr>
+    <tr><td>Módulos</td><td>Módulo Relé</td><td>4×3</td></tr>
+    <tr><td>Potência</td><td>7805 Regulador</td><td>3×1</td></tr>
+    <tr><td>Passivos</td><td>Potenciómetro, Cristal</td><td>3×2, 2×1</td></tr>
+    <tr><td>Interface</td><td>Botão 4 pinos</td><td>2×2</td></tr>
+    <tr><td>Displays</td><td>OLED I2C 4pin</td><td>4×1</td></tr>
+    <tr><td>Genérico</td><td>SIP-6, SIP-8 (barras de pinos)</td><td>6×1, 8×1</td></tr>
+  </table>
+
+  <h3>Colocar um componente da biblioteca</h3>
+  <div class="steps">
+    <div class="step">Clicar em <strong>"◫ Abrir biblioteca"</strong> na sidebar (ou selecionar a ferramenta Biblioteca)</div>
+    <div class="step">No modal, clicar no componente desejado — a biblioteca fecha e a ferramenta fica ativa</div>
+    <div class="step">Clicar no furo da placa onde ficará o <strong>canto superior esquerdo</strong> do componente</div>
+    <div class="step">O componente é colocado se couber na placa (verificação automática de limites)</div>
+  </div>
+</section>
+
+<!-- ───────── 7 ───────── -->
+<section id="s7">
+  <h2><span class="sec-num">7</span> Criar Componentes Custom</h2>
+
+  <p>Se o componente não existe na biblioteca, pode criar um personalizado com dimensões e pinos à medida.</p>
+
+  <div class="steps">
+    <div class="step">Clicar em <strong>"+ Criar componente"</strong> na sidebar</div>
+    <div class="step">Preencher <strong>nome</strong> (ex: "Módulo NRF24L01"), <strong>categoria</strong> e <strong>cor do corpo</strong></div>
+    <div class="step">Definir <strong>largura</strong> e <strong>altura</strong> em furos</div>
+    <div class="step">Na grelha de pinos, clicar para <strong>ativar/desativar</strong> cada posição de pino (verde = ativo)</div>
+    <div class="step">Usar as <strong>pré-definições rápidas</strong>: DIP (topo+fundo), SIP (só topo), Todos, ou Limpar</div>
+    <div class="step">Clicar <strong>"💾 Guardar componente"</strong> — aparece na biblioteca sob a categoria escolhida</div>
+  </div>
+
+  <div class="card tip">
+    <div class="card-title">💡 Exportação inclui custom</div>
+    Ao exportar o projeto como ficheiro <code>.perfboard.json</code>, os componentes e placas personalizados são incluídos. Ao importar noutro computador, ficam disponíveis automaticamente.
+  </div>
+</section>
+
+<!-- ───────── 8 ───────── -->
+<section id="s8">
+  <h2><span class="sec-num">8</span> Edição e Seleção</h2>
+
+  <h3>Selecionar componente</h3>
+  <p>Clicar no botão <strong>"▹ Selecionar"</strong> na sidebar (ou clicar em qualquer ferramenta de edição). Depois clicar num componente — fica com contorno branco brilhante. O componente selecionado pode ser arrastado, apagado ou duplicado.</p>
+
+  <h3>Arrastar</h3>
+  <p>Com um componente selecionado, arrastar move-o para outra posição. As cores dos furos antigos são limpas e os novos são marcados. A verificação de limites garante que componentes com dimensão (ICs, headers, biblioteca) não saem da placa.</p>
+
+  <h3>Editar etiquetas (double-click)</h3>
+  <p>Fazer <strong>duplo-clique</strong> num componente na ferramenta Selecionar abre um campo de edição inline. Permite alterar o nome/valor (ex: mudar "R" para "R1=330Ω", ou "IC" para "74HC595"). Premir <span class="kbd">Enter</span> para confirmar ou <span class="kbd">Escape</span> para cancelar.</p>
+
+  <h3>Duplicar</h3>
+  <p>Com um componente selecionado, premir <span class="kbd">Ctrl</span>+<span class="kbd">D</span> cria uma cópia com um ligeiro offset. Muito útil para circuitos repetitivos (ex: vários resistores iguais, múltiplos LEDs).</p>
+
+  <h3>Desfazer / Refazer</h3>
+  <p><span class="kbd">Ctrl</span>+<span class="kbd">Z</span> desfaz a última ação (até 40 passos). <span class="kbd">Ctrl</span>+<span class="kbd">Y</span> ou <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">Z</span> refaz. Os botões "↺ Desfazer" e "↻ Refazer" na sidebar mostram se existem ações disponíveis.</p>
+
+  <h3>Apagar</h3>
+  <table>
+    <tr><th>Método</th><th>O que apaga</th></tr>
+    <tr><td>Ferramenta Borracha + clique</td><td>Apaga o componente sob o cursor, ou o furo se não houver componente</td></tr>
+    <tr><td>Ferramenta Borracha + arrastar</td><td>Apaga todos os furos por onde o cursor passa (borracha de área)</td></tr>
+    <tr><td>Selecionar + <span class="kbd">Delete</span></td><td>Apaga o componente selecionado e limpa os seus furos</td></tr>
+    <tr><td>"⟳ Limpar tudo"</td><td>Apaga todos os componentes e furos (pede confirmação)</td></tr>
+  </table>
+
+  <div class="card warning">
+    <div class="card-title">⚠️ Atenção ao apagar</div>
+    Ao apagar um componente, os seus furos são limpos automaticamente — exceto os que são partilhados com outros componentes. Se apagar acidentalmente, use <span class="kbd">Ctrl</span>+<span class="kbd">Z</span> imediatamente.
+  </div>
+</section>
+
+<!-- ───────── 9 ───────── -->
+<section id="s9">
+  <h2><span class="sec-num">9</span> Vistas e Análise</h2>
+
+  <h3>Frente + Verso (dual view)</h3>
+  <p>Ativar a checkbox <strong>"Frente + Verso"</strong> na sidebar mostra simultaneamente o lado dos componentes (esquerda, verde) e o lado do cobre (direita, dourado). O verso é <strong>espelhado automaticamente</strong> — exatamente como se virássemos a placa real. Os pontos de solda aparecem como círculos dourados nas posições dos pinos.</p>
+
+  <div class="card copper">
+    <div class="card-title">🔄 Espelhamento</div>
+    O que está à esquerda na frente fica à direita no verso. O programa faz isto automaticamente — é especialmente útil para verificar que os fios no lado do cobre (por onde se solda) vão para os sítios certos.
+  </div>
+
+  <h3>Mostrar Nets</h3>
+  <p>Ativar <strong>"Mostrar Nets"</strong> colore todos os furos que estão eletricamente ligados com a mesma cor. Permite verificar visualmente se todas as ligações necessárias estão feitas e se não há interrupções. Em breadboards, as ligações internas (grupos de 5, rails de alimentação) são automaticamente incluídas.</p>
+
+  <h3>Alertas de conflito</h3>
+  <p>Ativar <strong>"Alertas de conflito"</strong> mostra um <strong>anel amarelo pulsante</strong> em furos onde dois fios de cores diferentes se encontram — possível curto-circuito. Nem todo o conflito é um erro (pode ser intencional), mas deve ser verificado.</p>
+
+  <h3>Imagem de fundo</h3>
+  <p>Carregar uma <strong>fotografia da placa real</strong> como fundo permite sobrepor o desenho digital sobre a placa física. O slider de opacidade ajusta a transparência. Útil para reproduzir um circuito existente ou para verificar posições.</p>
+
+  <h3>Zoom e navegação</h3>
+  <table>
+    <tr><th>Ação</th><th>Como fazer</th></tr>
+    <tr><td>Zoom in/out</td><td>Scroll do rato (↑ in, ↓ out)</td></tr>
+    <tr><td>Pinch zoom</td><td>2 dedos em tablets e touchscreens</td></tr>
+    <tr><td>Zoom botões</td><td>+/− no canto superior direito</td></tr>
+    <tr><td>Auto-ajuste</td><td>Botão "Ajustar" — redimensiona para caber na janela</td></tr>
+  </table>
+</section>
+
+<!-- ───────── 10 ───────── -->
+<section id="s10">
+  <h2><span class="sec-num">10</span> Guardar e Abrir Projetos</h2>
+
+  <h3>Guardar no browser</h3>
+  <p>Clicar <strong>💾</strong> guarda rapidamente com o nome atual. Clicar <strong>"Guardar como"</strong> permite definir outro nome. Os projetos ficam no localStorage do browser.</p>
+
+  <h3>Auto-save</h3>
+  <p>O programa guarda automaticamente a cada <strong>60 segundos</strong> se houver alterações. O auto-save aparece como "(auto) NomeProjeto" na lista de projetos guardados.</p>
+
+  <h3>Abrir projeto</h3>
+  <p>Clicar <strong>"📂 Abrir"</strong> mostra a lista com nome, placa, número de componentes e data. Cada projeto tem um botão 🗑 para apagar (com confirmação).</p>
+
+  <h3>Exportar / importar ficheiro</h3>
+  <table>
+    <tr><th>Botão</th><th>Ação</th><th>Formato</th></tr>
+    <tr><td>📥 Ficheiro</td><td>Descarrega o projeto</td><td><code>.perfboard.json</code> (inclui componentes custom e placas custom)</td></tr>
+    <tr><td>📤 Abrir fich.</td><td>Importa um ficheiro</td><td>Restaura componentes, cores, placas custom e biblioteca custom</td></tr>
+  </table>
+
+  <div class="card tip">
+    <div class="card-title">💡 Mudar de computador</div>
+    O localStorage é local ao browser e computador. Para transferir: exportar como ficheiro (<code>.perfboard.json</code>) num computador e importar no outro. Tudo é incluído — projeto, placas custom e componentes custom.
+  </div>
+</section>
+
+<!-- ───────── 11 ───────── -->
+<section id="s11">
+  <h2><span class="sec-num">11</span> Imprimir e Exportar</h2>
+
+  <h3>Imprimir esquema (A4)</h3>
+  <p>Clicar <strong>"🖨️ Imprimir esquema"</strong> gera um documento A4 com:</p>
+  <table>
+    <tr><th>Secção</th><th>Conteúdo</th></tr>
+    <tr><td>Cabeçalho</td><td>Nome do projeto, placa, número de componentes, data/hora</td></tr>
+    <tr><td>SVG da placa</td><td>Vista frontal com todos os componentes, fios, etiquetas, cores, ICs com pinos</td></tr>
+    <tr><td>Tabela de ligações</td><td>Cada fio: #, tipo (fio/resistência/etc.), etiqueta, coordenada DE, coordenada PARA, cor</td></tr>
+    <tr><td>Componentes colocados</td><td>Cada componente: #, tipo, etiqueta, coordenada de posição</td></tr>
+    <tr><td>Lista de material (BOM)</td><td>Contagem por tipo (×3 Fio, ×2 Resistência, ×1 DIP-16, etc.)</td></tr>
+    <tr><td>Notas</td><td>Espaço vazio para anotações manuscritas</td></tr>
+  </table>
+
+  <h3>Outras exportações</h3>
+  <table>
+    <tr><th>Formato</th><th>Botão</th><th>Uso</th></tr>
+    <tr><td>HTML</td><td>↓ Esquema HTML</td><td>Mesmo conteúdo da impressão, como ficheiro HTML autónomo</td></tr>
+    <tr><td>SVG</td><td>↓ SVG</td><td>Imagem vetorial da placa (editável em Inkscape, Figma, etc.)</td></tr>
+    <tr><td>PNG</td><td>↓ PNG</td><td>Imagem raster a 2× resolução (abre em qualquer dispositivo)</td></tr>
+  </table>
+</section>
+
+<!-- ───────── 12 ───────── -->
+<section id="s12">
+  <h2><span class="sec-num">12</span> Atalhos de Teclado</h2>
+
+  <table>
+    <tr><th>Atalho</th><th>Ação</th></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Z</span></td><td>Desfazer (até 40 passos)</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Y</span> ou <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">Z</span></td><td>Refazer</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>Guardar projeto</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">P</span></td><td>Imprimir esquema</td></tr>
+    <tr><td><span class="kbd">Ctrl</span>+<span class="kbd">D</span></td><td>Duplicar componente selecionado</td></tr>
+    <tr><td><span class="kbd">Delete</span> / <span class="kbd">Backspace</span></td><td>Apagar componente selecionado</td></tr>
+    <tr><td><span class="kbd">Escape</span></td><td>Cancelar ligação em curso / desselecionar / fechar modal</td></tr>
+  </table>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Campos de texto</div>
+    Quando o cursor está num campo de texto (nome do projeto, etiqueta, nome do componente custom, etc.), os atalhos são desativados automaticamente para não interferir com a escrita. Apenas <span class="kbd">Escape</span> funciona para sair do campo.
+  </div>
+</section>
+
+<!-- ───────── 13 ───────── -->
+<section id="s13">
+  <h2><span class="sec-num">13</span> Exemplo Prático Passo a Passo</h2>
+
+  <p>Vamos montar um circuito simples: um Arduino Nano com um LED e resistência em série, alimentado por VCC e GND.</p>
+
+  <div class="steps">
+    <div class="step">Selecionar a placa <strong>5×7 cm</strong> na barra superior (é a placa padrão)</div>
+    <div class="step">Clicar em <strong>"◫ Abrir biblioteca"</strong> e selecionar <strong>Arduino Nano</strong> (MCU, 15×2). Clicar na placa para colocar — posição C3 é um bom ponto de partida.</div>
+    <div class="step">Selecionar a ferramenta <strong>▬ Barramento</strong>. Clicar no atalho <strong style="color:#e74c3c">VCC</strong>. Clicar no furo A1, depois no furo A26 — toda a linha A fica vermelha (rail de VCC).</div>
+    <div class="step">Clicar no atalho <strong style="color:#3498db">GND</strong>. Clicar em S1, depois S26 — toda a linha S fica azul (rail de GND).</div>
+    <div class="step">Selecionar a ferramenta <strong>━ Fio</strong> e cor vermelha. Ligar o pino <strong>5V</strong> do Nano (posição no lado direito) ao rail VCC (linha A, mesma coluna).</div>
+    <div class="step">Cor azul. Ligar o pino <strong>GND</strong> do Nano ao rail GND.</div>
+    <div class="step">Selecionar a ferramenta <strong>⏛ Resistência</strong>. Clicar num furo na coluna do pino D13, clicar no furo 3 posições à frente. Aparece o corpo da resistência.</div>
+    <div class="step">Selecionar a ferramenta <strong>◐ LED</strong>, cor verde. Ligar o furo onde termina a resistência até ao rail GND. O LED aparece entre os dois pontos.</div>
+    <div class="step">Fazer <strong>duplo-clique</strong> na resistência (modo Selecionar), escrever <strong>"R1=220Ω"</strong> e premir Enter.</div>
+    <div class="step">Selecionar a ferramenta <strong>A Etiqueta</strong>, escrever "LED" no campo, clicar junto ao LED para colocar a etiqueta.</div>
+    <div class="step">Ativar <strong>"Frente + Verso"</strong> para verificar as ligações no lado do cobre.</div>
+    <div class="step">Ativar <strong>"Mostrar Nets"</strong> para confirmar que o VCC, GND e sinal D13→R1→LED→GND estão todos ligados corretamente.</div>
+    <div class="step">Clicar <strong>"🖨️ Imprimir esquema"</strong> — levar o papel para a bancada e seguir a tabela de ligações.</div>
+  </div>
+
+  <div class="card tip">
+    <div class="card-title">💡 Próximo passo</div>
+    Depois de montar e testar o circuito na perfboard, consultar o <strong><a href="Nexus_ESECCinfaesCTE_Guia_Perfboard.html" style="color:inherit">Guia Completo de Montagem em Placas Perfuradas</a></strong> para técnicas de soldadura, sequência de montagem e resolução de problemas.
+  </div>
+</section>
+
+</div>
+
+<div class="footer">
+  <p><strong>Manual — Perfboard Designer v2.3</strong></p>
+  <p>ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso Profissional EAC · Prof. Avelino A. Colaço</p>
+  <p style="margin-top:6px"><a href="Nexus_ESECCinfaesCTE_Perfboard.html">Abrir Perfboard Designer</a> · <a href="Nexus_ESECCinfaesCTE_Esquemas.html">Abrir Esquemas de Ligação</a> · <a href="index.html">Voltar ao Nexus</a></p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual — Nexus ESECCinfãesCTE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0F2447; --navy-light:#e8eef8; --navy-dark:#091830;
+  --accent:#0284C7; --accent-light:#e0f2fe;
+  --teal:#0891B2; --green:#059669; --purple:#7C3AED; --gold:#D97706;
+  --red:#dc2626; --amber:#d97706;
+  --bg:#f8f9fc; --card:#fff; --text:#1e293b; --muted:#64748b; --border:#d4dde8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'DM Sans',system-ui,sans-serif;color:var(--text);background:var(--bg);line-height:1.75}
+
+@media print {
+  body{font-size:11px;line-height:1.5;background:#fff}
+  .no-print,.hero-bg,.toc{display:none!important}
+  .hero{min-height:auto!important;padding:20px!important}
+  section{break-inside:avoid;page-break-inside:avoid}
+  .card{box-shadow:none!important;border:1px solid #ddd}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:15mm}
+}
+
+.hero{position:relative;min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:50px 24px 44px;overflow:hidden;background:linear-gradient(160deg,var(--navy-dark) 0%,var(--navy) 40%,#1B3A6B 100%);color:#fff}
+.hero-bg{position:absolute;inset:0;opacity:0.06;background-image:radial-gradient(circle at 2px 2px, #fff 1px, transparent 1px);background-size:22px 22px}
+.hero h1{font-size:clamp(1.8rem,5vw,2.6rem);font-weight:800;line-height:1.15;letter-spacing:-0.02em;margin-bottom:8px;position:relative}
+.hero h1 span{background:linear-gradient(90deg,#38BDF8,#34D399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero .subtitle{font-size:clamp(0.85rem,2vw,1rem);opacity:0.8;max-width:600px;margin:0 auto 20px;font-weight:300}
+.hero .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:20px;padding:5px 16px;font-size:0.8rem;font-weight:600;backdrop-filter:blur(4px)}
+.hero .print-btn{position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}
+.hero .print-btn:hover{background:rgba(255,255,255,0.25)}
+
+.toc{max-width:880px;margin:-28px auto 0;position:relative;z-index:1;background:var(--card);border-radius:14px;padding:24px 28px;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid var(--border)}
+.toc h2{font-size:0.85rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--navy);margin-bottom:12px;font-weight:700}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+.toc a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.82rem;font-weight:500;transition:all 0.15s}
+.toc a:hover{background:var(--navy-light);color:var(--navy)}
+.toc a .num{min-width:22px;height:22px;border-radius:50%;background:var(--accent-light);color:var(--navy);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700}
+
+.content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+section{margin-bottom:36px}
+section h2{font-size:1.3rem;font-weight:800;color:var(--navy-dark);margin-bottom:6px;padding-bottom:8px;border-bottom:3px solid var(--accent);display:flex;align-items:center;gap:10px}
+section h2 .sec-num{background:var(--navy);color:#fff;min-width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0}
+section h3{font-size:1.02rem;font-weight:700;color:var(--navy);margin:18px 0 8px;display:flex;align-items:center;gap:6px}
+section h3::before{content:'';width:4px;height:18px;background:var(--accent);border-radius:2px;flex-shrink:0}
+h4{font-size:0.9rem;font-weight:700;color:var(--text);margin:14px 0 6px}
+p{margin-bottom:12px;font-size:0.88rem}
+ul,ol{margin:0 0 14px 24px;font-size:0.86rem}
+li{margin-bottom:4px}
+
+.card{background:var(--card);border-radius:10px;padding:16px 20px;margin:12px 0;box-shadow:0 2px 12px rgba(0,0,0,0.04);border:1px solid var(--border)}
+.card.warning{border-left:4px solid var(--red);background:#fef2f2}
+.card.tip{border-left:4px solid var(--green);background:#f0fdf4}
+.card.info{border-left:4px solid var(--accent);background:#eff6ff}
+.card-title{font-weight:700;font-size:0.9rem;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.card.warning .card-title{color:var(--red)}
+.card.tip .card-title{color:var(--green)}
+.card.info .card-title{color:var(--accent)}
+.card-icon{font-size:1.1rem;flex-shrink:0}
+
+.steps{counter-reset:step;margin:12px 0}
+.steps .step,.steps li{counter-increment:step;padding:8px 0 8px 44px;position:relative;font-size:0.88rem;border-left:2px solid var(--border);margin-left:14px;list-style:none}
+.steps .step:last-child,.steps li:last-child{border-left-color:transparent}
+.steps .step::before,.steps li::before{content:counter(step);position:absolute;left:-15px;top:6px;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700}
+.steps .step strong,.steps li strong{color:var(--navy)}
+
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.85rem}
+th{background:var(--navy);color:#fff;padding:8px 12px;text-align:left;font-weight:600;font-size:0.8rem}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:nth-child(even) td{background:#f5f8fc}
+code{font-family:'JetBrains Mono',monospace;font-size:0.82rem;background:var(--navy-light);padding:1px 6px;border-radius:4px;color:var(--navy)}
+
+.shortcut-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:14px 0}
+.shortcut-card{display:flex;align-items:center;gap:10px;background:#F8FAFC;border-radius:8px;padding:10px 14px;border:1px solid var(--border)}
+.sc-keys{font-size:1.2rem;flex-shrink:0;width:32px;text-align:center}
+.sc-label{font-size:0.85rem;font-weight:700;color:var(--navy)}
+.sc-desc{font-size:0.72rem;color:var(--muted)}
+
+.footer{text-align:center;padding:30px;border-top:2px solid var(--border);margin-top:40px;color:var(--muted);font-size:0.82rem;line-height:1.8}
+.footer a{color:var(--accent);text-decoration:none}
+
+@media(max-width:700px){
+  .hero{padding:36px 16px 32px}
+  .toc{margin:-20px 12px 0;padding:16px}
+  .toc-grid{grid-template-columns:1fr}
+  .content{padding:20px 16px 40px}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir</button>
+  <div style="font-size:2.5rem;margin-bottom:8px;position:relative">📖</div>
+  <h1>Manual <span>Nexus ESECCinfãesCTE</span></h1>
+  <div class="subtitle">Guia completo do sistema de avaliação, presenças e ferramentas técnicas</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+    <span class="badge">🏫 ES/3 Prof. Dr. Flávio F. Pinto Resende</span>
+    <span class="badge">📚 Curso EAC</span>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc no-print">
+  <h2>Índice</h2>
+  <div class="toc-grid">
+    <a href="#setup-github"><span class="num">1</span>📦 1. Criar o Repositório GitHub</a>
+    <a href="#setup-sheets"><span class="num">2</span>📊 2. Configurar o Google Sheets</a>
+    <a href="#setup-ligar"><span class="num">3</span>🔗 3. Ligar ao Sistema</a>
+    <a href="#setup-alunos"><span class="num">4</span>📱 4. Distribuir aos Alunos</a>
+    <a href="#prof-gerir"><span class="num">5</span>⚙️ Gerir — Painel de Administração</a>
+    <a href="#prof-publicar"><span class="num">6</span>📡 Publicar Configuração</a>
+    <a href="#prof-pares"><span class="num">7</span>🗳️ Avaliação de Pares</a>
+    <a href="#prof-autoav"><span class="num">8</span>✍️ Autoavaliação</a>
+    <a href="#prof-estagio"><span class="num">9</span>📍 Presenças de Estágio</a>
+    <a href="#prof-aulas"><span class="num">10</span>📝 Aulas Práticas</a>
+    <a href="#prof-relatorios"><span class="num">11</span>📄 Relatórios</a>
+    <a href="#prof-novaturma"><span class="num">12</span>🔄 Nova Turma / Ano Letivo</a>
+    <a href="#aluno-acesso"><span class="num">13</span>🔑 Acesso do Aluno</a>
+    <a href="#aluno-pares"><span class="num">14</span>🗳️ Votar — Avaliação de Pares</a>
+    <a href="#aluno-autoav"><span class="num">15</span>✍️ Autoavaliação</a>
+    <a href="#aluno-estagio"><span class="num">16</span>📍 Presenças de Estágio</a>
+    <a href="#aluno-aulas"><span class="num">17</span>📝 Presenças em Aulas</a>
+    <a href="#prof-horarios"><span class="num">18</span>⏰ Horários de Estágio</a>
+    <a href="#prof-multiav"><span class="num">19</span>📚 Multi-Autoavaliação</a>
+    <a href="#prof-turmas"><span class="num">20</span>🏫 Gestão de Turmas</a>
+    <a href="#ref-offline"><span class="num">21</span>📵 Modo Offline</a>
+    <a href="#ref-qrsessao"><span class="num">22</span>📲 QR por Sessão de Aula</a>
+    <a href="#ref-horario"><span class="num">23</span>📅 Horário Semanal</a>
+    <a href="#ref-tc"><span class="num">24</span>📋 Tomada de Conhecimento</a>
+    <a href="#ref-import-mestre"><span class="num">25</span>📥 Importar do Mestre</a>
+    <a href="#ref-seguranca"><span class="num">26</span>🔒 Segurança (4 Níveis)</a>
+    <a href="#ref-login"><span class="num">27</span>🔑 Login Centralizado (Opção C)</a>
+    <a href="#ref-sheets"><span class="num">28</span>📊 Folhas do Google Sheets</a>
+    <a href="#ref-problemas"><span class="num">29</span>🔧 Resolução de Problemas</a>
+    <a href="#tool-ferramentas"><span class="num">30</span>🔧 Ferramentas Técnicas</a>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h1>Manual de <span>Utilização</span></h1>
+<p class="subtitle">Nexus ESECCinfãesCTE — Sistema de avaliação, autoavaliação e controlo de presenças</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section>
+<h2 id="setup-github"><span class="sec-num">1</span> 📦 1. Criar o Repositório GitHub</h2>
+
+<div class="card">
+<h4>Pré-requisitos</h4>
+<p>Conta GitHub gratuita · Conta Google · Os 4 ficheiros do sistema</p>
+</div>
+
+<ol class="steps">
+  <li>Abre <strong>github.com</strong> e faz login (ou cria conta)</li>
+  <li>Clica no <strong>+</strong> (canto superior direito) → <strong>New repository</strong></li>
+  <li>Nome: <code>nexus-eseccinfaescte</code> · Visibilidade: <strong>Public</strong> · Marca <strong>"Add a README"</strong></li>
+  <li>Clica <strong>Create repository</strong></li>
+  <li>No repositório, clica <strong>Add file → Upload files</strong></li>
+  <li>Arrasta os 4 ficheiros: <code>index.html</code>, <code>..._Professor.html</code>, <code>..._Aluno.html</code>, <code>..._Code.gs</code></li>
+  <li>Escreve uma mensagem de commit e clica <strong>Commit changes</strong></li>
+</ol>
+
+<h3>Ativar o GitHub Pages</h3>
+<ol class="steps">
+  <li>Vai a <strong>Settings</strong> (separador no topo do repositório)</li>
+  <li>No menu lateral, clica <strong>Pages</strong></li>
+  <li>Source: <strong>Deploy from a branch</strong> · Branch: <strong>main</strong> · Pasta: <strong>/ (root)</strong></li>
+  <li>Clica <strong>Save</strong> · Aguarda 1–2 minutos</li>
+  <li>O URL aparece: <code>https://teuuser.github.io/nexus-eseccinfaescte/</code></li>
+</ol>
+
+<div class="card info">
+  <span class="card-icon">ℹ️</span>
+  <div>O repositório deve ser <strong>público</strong> para o GitHub Pages gratuito funcionar. Não há risco de segurança — os dados estão no Google Sheets (privado), não no repositório.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="setup-sheets"><span class="sec-num">2</span> 📊 2. Configurar o Google Sheets</h2>
+
+<ol class="steps">
+  <li>Abre <strong>sheets.google.com</strong> e cria um ficheiro novo</li>
+  <li>Dá um nome descritivo: <em>Nexus — 3.ºB EAC — 2025/2026</em></li>
+  <li>Vai a <strong>Extensões → Apps Script</strong></li>
+  <li>Apaga o código existente no editor</li>
+  <li>Abre o ficheiro <code>Nexus_ESECCinfaesCTE_Code.gs</code> num editor de texto, <strong>copia tudo</strong> e cola</li>
+  <li>Clica no ícone 💾 para guardar</li>
+</ol>
+
+<h3>Implementar como Aplicação Web</h3>
+<ol class="steps">
+  <li>No Apps Script, clica <strong>Implementar → Nova implementação</strong></li>
+  <li>Tipo: <strong>Aplicação Web</strong></li>
+  <li>Executar como: <strong>"Eu"</strong></li>
+  <li>Quem tem acesso: <strong>"Qualquer pessoa"</strong></li>
+  <li>Clica <strong>Implementar</strong> e autoriza quando pedido</li>
+  <li><strong>Copia o URL gerado</strong> — começa por <code>https://script.google.com/macros/s/...</code></li>
+</ol>
+
+<div class="card warning">
+  <span class="card-icon">⚠️</span>
+  <div>Se o Google mostrar "Esta app não foi verificada", clica <strong>Avançado → Ir para (nome do projeto)</strong>. É normal para scripts pessoais.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="setup-ligar"><span class="sec-num">3</span> 🔗 3. Ligar ao Sistema</h2>
+
+<ol class="steps">
+  <li>Abre o ficheiro <strong>Professor</strong> (via GitHub Pages ou localmente)</li>
+  <li>Vai a <strong>⚙️ Gerir → Google Sheets</strong></li>
+  <li>Cola o URL do Apps Script e clica <strong>🔌 Testar</strong></li>
+  <li>Deve aparecer <span class="badge badge-green">✅ Ligação estabelecida</span></li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="setup-alunos"><span class="sec-num">4</span> 📱 4. Distribuir aos Alunos</h2>
+
+<p>Cada aluno precisa de <strong>dois elementos</strong> (uma única vez):</p>
+
+<table>
+  <tr><th>O quê</th><th>Exemplo</th><th>Para quê</th></tr>
+  <tr><td>URL da página do Aluno</td><td><code>https://teuuser.github.io/.../Aluno.html</code></td><td>Aceder à interface</td></tr>
+  <tr><td>URL do Apps Script</td><td><code>https://script.google.com/macros/s/.../exec</code></td><td>Ligar ao Sheets</td></tr>
+</table>
+
+<div class="card tip">
+  <span class="card-icon">💡</span>
+  <div>O aluno cola o URL do Sheets na primeira vez e fica guardado no telemóvel. Nunca mais precisa de o inserir — mesmo que feche o browser.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PROFESSOR -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="prof-gerir"><span class="sec-num">5</span> ⚙️ Gerir — Painel de Administração</h2>
+
+<p>Acedido pelo botão <strong>⚙️ Gerir</strong> na barra superior (protegido por senha, predefinição: <code>eac2025</code>).</p>
+
+<h3>O que podes fazer</h3>
+<div class="shortcut-grid">
+  <div class="shortcut-card"><div class="sc-icon">📡</div><div class="sc-title">Publicar</div><div class="sc-desc">Envia toda a config para o Sheets</div></div>
+  <div class="shortcut-card"><div class="sc-icon">📲</div><div class="sc-title">QR Code</div><div class="sc-desc">Gera QR único para alunos</div></div>
+  <div class="shortcut-card"><div class="sc-icon">🗳️</div><div class="sc-title">Pares</div><div class="sc-desc">Sessão, grupos, critérios</div></div>
+  <div class="shortcut-card"><div class="sc-icon">✍️</div><div class="sc-title">Autoavaliação</div><div class="sc-desc">Vetores, pesos, disciplina</div></div>
+  <div class="shortcut-card"><div class="sc-icon">📍</div><div class="sc-title">Estágio</div><div class="sc-desc">Alunos, locais GPS, horários</div></div>
+  <div class="shortcut-card"><div class="sc-icon">📝</div><div class="sc-title">Aulas</div><div class="sc-desc">Alunos, sessões, presenças</div></div>
+  <div class="shortcut-card"><div class="sc-icon">☁️</div><div class="sc-title">Google Sheets</div><div class="sc-desc">URL, teste de ligação</div></div>
+  <div class="shortcut-card"><div class="sc-icon">🔑</div><div class="sc-title">Senhas</div><div class="sc-desc">3 senhas independentes</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-publicar"><span class="sec-num">6</span> 📡 Publicar Configuração</h2>
+
+<p>O botão <strong>📡 Publicar Configuração</strong> (topo do painel Gerir) envia toda a configuração para a folha "Configuração" do Google Sheets. O ficheiro do <strong>Aluno</strong> lê automaticamente esta configuração ao abrir.</p>
+
+<div class="card info">
+  <span class="card-icon">🔄</span>
+  <div>Sempre que alterares a configuração (novos alunos, nova sessão de aula, novo local), clica <strong>📡 Publicar</strong> para os alunos receberem as alterações.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-pares"><span class="sec-num">7</span> 🗳️ Avaliação de Pares</h2>
+
+<h4>Configuração (⚙️ Gerir → Configuração de Pares)</h4>
+<p>Define a sessão (turma, curso, tipo), os grupos e membros, e os critérios de avaliação (até 10, com emoji, descrição, escala 1–5★). Os critérios são convertidos para 0–20 valores automaticamente.</p>
+
+<h4>Fluxo do Aluno</h4>
+<p>O aluno seleciona o grupo que está a apresentar → avalia com estrelas em cada critério → opcionalmente avalia cada membro individualmente → submete. Cada dispositivo só pode votar uma vez por grupo.</p>
+
+<h4>Resultados (📈 Resultados)</h4>
+<p>Ranking por média, comparação entre grupos, comentários e avaliação individual por membro. Importação de votos do Sheets para ver resultados em qualquer dispositivo.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-autoav"><span class="sec-num">8</span> ✍️ Autoavaliação</h2>
+
+<p>Define vetores (ex: Assiduidade, Participação, Trabalho), cada um com peso percentual e até 4 características. Os alunos avaliam-se de 1–5★ em cada característica. A nota final é ponderada pelos pesos.</p>
+
+<p>Suporta múltiplas disciplinas/UFCDs — cada uma cria um tab separado no Sheets (ex: <code>AA_EAC</code>, <code>AA_UFCD6025</code>).</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-estagio"><span class="sec-num">9</span> 📍 Presenças de Estágio</h2>
+
+<h4>Configuração (⚙️ Gerir → 📍 Presenças de Estágio)</h4>
+
+<table>
+  <tr><th>Separador</th><th>O que configurar</th></tr>
+  <tr><td><strong>📊 Painel</strong></td><td>Vista diária em tempo real de todos os alunos</td></tr>
+  <tr><td><strong>👥 Alunos</strong></td><td>Até 20 alunos, cada um com código de 4 dígitos e local atribuído</td></tr>
+  <tr><td><strong>📍 Locais</strong></td><td>Coordenadas GPS, raio, horário de entrada/saída por local</td></tr>
+  <tr><td><strong>📄 Relatórios</strong></td><td>Relatório individual filtrável, impressão, CSV</td></tr>
+</table>
+
+<h4>Horário e Pontualidade</h4>
+<p>Define horário global (ex: 09:00–17:30) com tolerâncias configuráveis. Cada local pode ter horário próprio. Ao marcar entrada:</p>
+
+<table>
+  <tr><th>Atraso</th><th>Estado</th></tr>
+  <tr><td>≤ 10 min</td><td><span class="badge badge-green">✅ Presente</span></td></tr>
+  <tr><td>10–15 min</td><td><span class="badge badge-gold">⚠️ Falta de pontualidade</span></td></tr>
+  <tr><td>> 15 min</td><td><span class="badge badge-red">❌ Falta</span></td></tr>
+</table>
+
+<h4>GPS</h4>
+<p>O sistema verifica se o aluno está dentro do raio do local atribuído. Cada registo inclui coordenadas, distância ao centro, e indicação "No estágio?" (Sim/Não).</p>
+
+<h4>Pausas</h4>
+<p>O aluno pode registar pausas (🍽️ Almoço, ☕ Lanche, 🚶 Intervalo, ou motivo personalizado) sem ter de fazer saída + nova entrada. As pausas têm cronómetro em tempo real e são subtraídas automaticamente das horas contabilizadas.</p>
+
+<h4>Feedback Diário</h4>
+<p>Após marcar entrada, o aluno pode opcionalmente descrever o que fez e avaliar o dia de 0 a 10.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-aulas"><span class="sec-num">10</span> 📝 Aulas Práticas</h2>
+
+<h4>Configuração (⚙️ Gerir → 📝 Aulas Práticas)</h4>
+
+<table>
+  <tr><th>Separador</th><th>O que configurar</th></tr>
+  <tr><td><strong>📅 Sessões</strong></td><td>Disciplina, módulo, sumário, data, hora início, duração, tolerâncias</td></tr>
+  <tr><td><strong>👥 Alunos</strong></td><td>Até 20 alunos, cada um com código + palavra-passe individual</td></tr>
+  <tr><td><strong>📊 Painel</strong></td><td>Vista em tempo real da sessão ativa</td></tr>
+  <tr><td><strong>📄 Relatórios</strong></td><td>Relatório por aluno/disciplina, impressão, CSV</td></tr>
+</table>
+
+<h4>Criar sessão de aula</h4>
+<p>Preenche disciplina, módulo (opcional), sumário (visível ao aluno), data, hora início, duração e tolerâncias. Clica <strong>📅 Criar e Abrir Sessão</strong>. Só pode haver <strong>uma sessão ativa</strong> de cada vez.</p>
+
+<h4>Fluxo do Aluno</h4>
+<p>Introduz código + palavra-passe → vê a sessão ativa com sumário → clica <strong>✋ Marcar Presença</strong> → recebe estado automático (Presente / Pontualidade / Falta) → pode registar pausas → pode escrever feedback e avaliar a aula de 0 a 10.</p>
+
+<h4>Barras de progresso</h4>
+<p>O painel do professor mostra barras de horas acumuladas por aluno, com contagem de presenças, pontualidade e faltas.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-relatorios"><span class="sec-num">11</span> 📄 Relatórios</h2>
+
+<p>Cada secção (Estágio e Aulas) tem um separador de relatórios que permite:</p>
+<ul>
+  <li>Filtrar por <strong>aluno</strong> e <strong>disciplina/período</strong></li>
+  <li>Gerar relatório detalhado com tabela dia-a-dia</li>
+  <li><strong>🖨️ Imprimir</strong> — abre janela de impressão formatada</li>
+  <li><strong>📊 CSV</strong> — exporta para Excel/Calc</li>
+</ul>
+
+<p>Os relatórios incluem: data, horários de entrada/saída/marcação, atrasos, estados, pausas, avaliação diária e feedback do aluno.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-novaturma"><span class="sec-num">12</span> 🔄 Nova Turma / Ano Letivo</h2>
+
+<p>No fim do ano, em <strong>⚙️ Gerir → Nova Turma</strong>:</p>
+
+<table>
+  <tr><th>Ação</th><th>O que faz</th></tr>
+  <tr><td><strong>💾 Exportar Template</strong></td><td>Guarda ficheiro JSON com locais, critérios, horários (sem alunos/dados)</td></tr>
+  <tr><td><strong>📂 Importar Template</strong></td><td>Carrega a estrutura de um template anterior</td></tr>
+  <tr><td><strong>🔄 Nova Turma (mesmo Sheets)</strong></td><td>Apaga alunos e dados, mantém estrutura e Sheets (dados ficam como arquivo)</td></tr>
+  <tr><td><strong>🆕 Nova Turma + Novo Sheets</strong></td><td>Apaga tudo incluindo URL — terás de criar Sheets novo</td></tr>
+</table>
+
+<div class="card tip">
+  <span class="card-icon">📥</span>
+  <div>Ambos os botões de "Nova Turma" exportam um <strong>backup completo automático</strong> antes de apagar.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ALUNO -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="aluno-acesso"><span class="sec-num">13</span> 🔑 Acesso do Aluno</h2>
+
+<p>Na primeira utilização, o aluno abre o link do <strong>Aluno.html</strong> e cola o URL do Google Sheets (fornecido pelo professor). O URL fica guardado no telemóvel com <strong>validade de um dia</strong> — à meia-noite expira e pede novo login nas secções que requerem código.</p>
+
+<p>A configuração (grupos, sessões, locais) é carregada automaticamente do Sheets a cada abertura.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-pares"><span class="sec-num">14</span> 🗳️ Votar — Avaliação de Pares</h2>
+
+<ol class="steps">
+  <li>Seleciona o grupo que está a apresentar</li>
+  <li>Avalia cada critério com 1–5 estrelas</li>
+  <li>Opcionalmente avalia os membros individualmente</li>
+  <li>Opcionalmente deixa um comentário</li>
+  <li>Clica <strong>✓ Submeter Avaliação</strong></li>
+</ol>
+
+<div class="card info">
+  <span class="card-icon">🔒</span>
+  <div>A avaliação é <strong>totalmente anónima</strong> — nenhum nome é associado às notas. Cada dispositivo só pode avaliar cada grupo uma vez.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-autoav"><span class="sec-num">15</span> ✍️ Autoavaliação</h2>
+
+<ol class="steps">
+  <li>Introduz o primeiro e último nome</li>
+  <li>Avalia cada característica de cada vetor com 1–5 estrelas</li>
+  <li>A nota final é calculada automaticamente com os pesos definidos pelo professor</li>
+  <li>Clica <strong>✅ Submeter</strong></li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-estagio"><span class="sec-num">16</span> 📍 Presenças de Estágio</h2>
+
+<ol class="steps">
+  <li>Introduz o <strong>código de acesso</strong> (4 dígitos, fornecido pelo professor)</li>
+  <li>Vê o estado GPS (dentro/fora do raio do local de estágio)</li>
+  <li>Clica <strong>▶ Marcar Entrada</strong> — o sistema regista coordenadas e calcula pontualidade</li>
+  <li>Durante o dia, pode registar pausas (almoço, lanche, etc.) com cronómetro</li>
+  <li>Pode escrever o que fez hoje e avaliar o dia de 0 a 10</li>
+  <li>No fim, clica <strong>⏹ Marcar Saída</strong></li>
+</ol>
+
+<div class="card warning">
+  <span class="card-icon">📡</span>
+  <div>O GPS deve estar ativo no telemóvel. A precisão varia com o dispositivo e ambiente (melhor ao ar livre). O raio de tolerância é configurável pelo professor.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-aulas"><span class="sec-num">17</span> 📝 Presenças em Aulas</h2>
+
+<ol class="steps">
+  <li>Introduz <strong>código</strong> + <strong>palavra-passe</strong></li>
+  <li>Vê a aula ativa (disciplina, módulo, sumário, horário)</li>
+  <li>Clica <strong>✋ Marcar Presença</strong></li>
+  <li>Recebe estado automático: <span class="badge badge-green">✅ Presente</span> / <span class="badge badge-gold">⚠️ Pontualidade</span> / <span class="badge badge-red">❌ Falta</span></li>
+  <li>Pode registar pausas e escrever feedback</li>
+</ol>
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-horarios"><span class="sec-num">18</span> ⏰ Horários de Estágio</h2>
+
+<p>O sistema verifica a <strong>pontualidade</strong> dos alunos ao marcar entrada no estágio, com base num horário configurável.</p>
+
+<h4>Horário global (⚙️ Gerir → 📍 Presenças → 👥 Alunos)</h4>
+<p>Na card "Configuração de Horas e Horário", define:</p>
+<table>
+  <tr><th>Campo</th><th>Default</th><th>Descrição</th></tr>
+  <tr><td>Hora de entrada</td><td>09:00</td><td>Hora esperada de chegada</td></tr>
+  <tr><td>Hora de saída</td><td>17:30</td><td>Hora esperada de saída</td></tr>
+  <tr><td>Tolerância pontualidade</td><td>10 min</td><td>Até este atraso = Presente</td></tr>
+  <tr><td>Tolerância falta</td><td>15 min</td><td>Acima disto = Falta</td></tr>
+</table>
+
+<h4>Horário por local</h4>
+<p>Cada local de estágio pode ter <strong>horário próprio</strong> (em 📍 Locais). Se definido, sobrepõe o horário global para os alunos desse local. Útil quando diferentes empresas têm horários distintos.</p>
+
+<h4>Cálculo automático</h4>
+<p>Quando o aluno marca entrada:</p>
+<table>
+  <tr><th>Atraso</th><th>Estado</th></tr>
+  <tr><td>≤ tolerância pontualidade</td><td><span class="badge badge-green">✅ Presente</span></td></tr>
+  <tr><td>Entre pontualidade e falta</td><td><span class="badge badge-gold">⚠️ Falta de pontualidade</span></td></tr>
+  <tr><td>> tolerância falta</td><td><span class="badge badge-red">❌ Falta</span></td></tr>
+</table>
+
+<p>O estado e minutos de atraso ficam registados no Google Sheets (colunas "Atraso" e "Pontualidade") com formatação colorida automática.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-multiav"><span class="sec-num">19</span> 📚 Multi-Autoavaliação</h2>
+
+<p>O sistema suporta <strong>múltiplas autoavaliações simultâneas</strong> na mesma turma — por exemplo, UFCD 6025, UFCD 6026 e EAC ao mesmo tempo.</p>
+
+<h4>Configuração (Professor)</h4>
+<ol class="steps">
+  <li>Vai a <strong>⚙️ Gerir → ✍️ Autoavaliação</strong></li>
+  <li>Configura a primeira disciplina (nome, vetores, pesos)</li>
+  <li>Clica <strong>💾 Guardar Atual na Lista</strong></li>
+  <li>Clica <strong>＋ Adicionar Disciplina</strong> e repete para cada disciplina</li>
+  <li>Clica <strong>📡 Publicar</strong> para enviar todas para os alunos</li>
+</ol>
+
+<h4>Fluxo do Aluno</h4>
+<p>Se houver mais de uma disciplina, o aluno vê um ecrã com <strong>cards</strong> — uma por disciplina. Clica numa, preenche, submete. Após submeter, vê um ecrã de sucesso com três opções:</p>
+<ul>
+  <li><strong>🔄 Repetir</strong> — corrigir erros ou outro aluno preencher no mesmo dispositivo</li>
+  <li><strong>📚 Outra disciplina</strong> — volta à seleção</li>
+  <li><strong>🏠 Início</strong> — volta ao ecrã principal</li>
+</ul>
+<p>As disciplinas já submetidas ficam marcadas com <span class="badge badge-green">✅</span>.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-turmas"><span class="sec-num">20</span> 🏫 Gestão de Turmas</h2>
+
+<p>O sistema suporta <strong>múltiplas turmas em simultâneo</strong> no mesmo browser, cada uma com os seus dados e Google Sheets independentes.</p>
+
+<h4>Criar turma</h4>
+<ol class="steps">
+  <li>Clica no <strong>＋</strong> ao lado do seletor de turma (barra superior)</li>
+  <li>Preenche o nome (ex: "3.ºB EAC"), ano letivo, e URL do Sheets</li>
+  <li>Clica <strong>➕ Criar Turma</strong></li>
+</ol>
+
+<h4>Alternar entre turmas</h4>
+<p>Seleciona a turma no dropdown da barra superior. A página recarrega com os dados dessa turma.</p>
+
+<h4>Importar backup</h4>
+<p>No modal de turmas, clica <strong>📂 Importar Backup</strong> para criar uma turma a partir de um ficheiro JSON de backup anterior.</p>
+
+<h4>Recuperar após limpar cookies</h4>
+<ol class="steps">
+  <li>Cria a turma com o URL do Sheets que tinhas</li>
+  <li>Vai a <strong>⚙️ Gerir → 📥 Importar do Sheets</strong></li>
+  <li>Toda a configuração publicada é recuperada</li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="ref-offline"><span class="sec-num">21</span> 📵 Modo Offline</h2>
+
+<p>Quando o dispositivo perde ligação à internet, aparece um <strong>banner vermelho</strong> no topo:</p>
+<div class="card warning">
+  <span class="card-icon">📵</span>
+  <div>Sem ligação à internet — os dados ficam guardados e serão enviados quando a rede voltar.</div>
+</div>
+
+<p>O que funciona offline:</p>
+<ul>
+  <li>A interface continua funcional (todos os dados estão em localStorage)</li>
+  <li>Votos e presenças são guardados localmente</li>
+  <li>Quando a rede volta, os votos em fila são enviados automaticamente</li>
+</ul>
+
+<p>O que <strong>não</strong> funciona offline: publicar configuração, importar do Sheets, submeter autoavaliações.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="ref-qrsessao"><span class="sec-num">22</span> 📲 QR por Sessão de Aula</h2>
+
+<p>Cada sessão de aula <strong>aberta</strong> tem um botão <strong>📲 QR</strong> que gera um QR code projetável com:</p>
+<ul>
+  <li>Link direto para o Aluno.html</li>
+  <li>Nome da disciplina e módulo</li>
+  <li>Horário da sessão</li>
+  <li>Sumário (se definido)</li>
+</ul>
+
+<p>O professor projeta o QR na sala → os alunos leem com o telemóvel → abrem o sistema → introduzem código + senha → marcam presença.</p>
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- LOGIN CENTRALIZADO                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+
+</section>
+<section>
+<h2 id="ref-horario"><span class="sec-num">23</span> 📅 Horário Semanal</h2>
+
+<p>O separador <strong>📅 Horário</strong> (dentro de 📝 Aulas Práticas) permite definir o horário semanal e gerar sessões automaticamente.</p>
+
+<h4>Definir o Horário</h4>
+<ol class="steps">
+  <li>Vai a <strong>📝 Aulas → 📅 Horário</strong></li>
+  <li>Para cada aula: seleciona dia, hora início, hora fim, disciplina e módulo</li>
+  <li>Clica <strong>＋ Adicionar</strong> — o slot aparece na tabela</li>
+  <li>O horário é completamente flexível: qualquer hora, qualquer duração</li>
+</ol>
+
+<h4>Gerar Sessões da Semana</h4>
+<ol class="steps">
+  <li>Clica <strong>📅 Gerar Sessões da Semana</strong></li>
+  <li>Indica a data da segunda-feira (sugerida automaticamente)</li>
+  <li>O sistema cria todas as sessões com datas concretas</li>
+  <li>Sessões duplicadas são ignoradas — seguro para re-gerar</li>
+  <li>Vai ao separador <strong>📅 Sessões</strong> e clica <strong>▶ Abrir</strong> na aula que vais dar</li>
+</ol>
+
+<h4>Exportar e Importar</h4>
+<p>O horário pode ser guardado como ficheiro <code>.horario.json</code> e reutilizado todos os períodos. O ficheiro é pequeno e contém apenas a estrutura do horário, não as sessões geradas.</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TOMADA DE CONHECIMENTO                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-tc"><span class="sec-num">24</span> 📋 Tomada de Conhecimento</h2>
+
+<p>A <strong>Tomada de Conhecimento</strong> permite ao professor dar a conhecer os critérios de avaliação e planificações de cada UFCD antes de iniciar a autoavaliação. Os alunos consultam e assinam digitalmente.</p>
+
+<h4>Configuração (Professor)</h4>
+<ol class="steps">
+  <li>Vai a <strong>⚙️ Gerir → ✍️ Autoavaliação</strong></li>
+  <li>Cria ou edita uma disciplina/UFCD</li>
+  <li>No campo <strong>Estado</strong>, seleciona:
+    <ul>
+      <li><strong>🔴 Inativa</strong> — não visível para alunos</li>
+      <li><strong>📋 Tomada de Conhecimento</strong> — aluno vê critérios + docs + assina</li>
+      <li><strong>✍️ Autoavaliação</strong> — aluno preenche a autoavaliação</li>
+      <li><strong>📋+✍️ Ambas</strong> — ambas as fases ativas em simultâneo</li>
+    </ul>
+  </li>
+  <li>Em <strong>📎 Documentos e Planificações</strong>, adiciona links para o Google Drive:
+    <ul>
+      <li>Planificação Anual</li>
+      <li>Planificação Modular</li>
+      <li>Programa da UFCD</li>
+      <li>Outros documentos relevantes</li>
+    </ul>
+  </li>
+  <li>Clica <strong>💾 Guardar Disciplina</strong> e depois <strong>📡 Publicar</strong></li>
+</ol>
+
+<h4>Fluxo do Aluno</h4>
+<ol class="steps">
+  <li>No menu, seleciona <strong>📋 Tomada de Conhecimento</strong></li>
+  <li>Vê as UFCDs com fase de conhecimento ativa</li>
+  <li>Clica nos links para consultar planificações (abrem no Drive)</li>
+  <li>Expande <strong>▶ Critérios de Avaliação</strong> para ver vetores e características</li>
+  <li>Marca a checkbox, desenha a <strong>assinatura digital</strong> com o dedo (telemóvel) ou rato (PC), e clica <strong>✅ Assinar</strong></li>
+  <li>O registo é enviado para o Sheets da turma (folha "Tomada Conhecimento")</li>
+</ol>
+
+<div class="card tip">
+  <span class="card-icon">💡</span>
+  <div>Os links do Google Drive devem apontar para ficheiros ou pastas com acesso público (ou acesso por link). Para partilhar uma pasta: no Drive, clica com botão direito → Partilhar → Qualquer pessoa com o link.</div>
+</div>
+
+<h4>Campo Nº UFCD</h4>
+<p>Cada disciplina tem agora um campo <strong>Nº UFCD</strong> separado do nome. Quando preenchido, o tab do Sheets é nomeado como <code>AA_UFCD6016</code> em vez de gerar uma abreviatura. O Nº UFCD aparece nos cards do aluno, no hero header, e como coluna no Sheets.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- IMPORTAR DO MESTRE                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-import-mestre"><span class="sec-num">25</span> 📥 Importar do Mestre</h2>
+
+<p>Nas secções de <strong>📝 Aulas Práticas</strong> e <strong>📍 Presenças de Estágio</strong>, o botão <strong>📥 Importar do Mestre</strong> puxa automaticamente os alunos do Sheets Mestre para a turma ativa.</p>
+<ul>
+  <li>Usa os códigos de estágio e aulas definidos no Sheets Mestre</li>
+  <li>Alunos que já existam na lista são ignorados (sem duplicados)</li>
+  <li>Requer que o login tenha sido feito pelo index.html (para o URL do Mestre estar em localStorage)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SEGURANÇA                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-seguranca"><span class="sec-num">26</span> 🔒 Segurança (4 Níveis)</h2>
+
+<p>O sistema implementa 4 níveis de segurança complementares:</p>
+
+<h4>Nível 1 — Token Secreto</h4>
+<p>Todos os pedidos ao Google Apps Script incluem um token secreto. Pedidos sem token válido são rejeitados com "Acesso negado." O token é definido na constante <code>API_TOKEN</code> e deve ser igual em todos os ficheiros (index, Professor, Aluno, Code.gs, Code_Mestre.gs, firmware ESP32).</p>
+
+<h4>Nível 2 — Sheets Privado</h4>
+<p>Os Google Sheets devem ser configurados como <strong>Restritos</strong> (Partilhar → Apenas tu). O Apps Script acede como o dono, independentemente de quem faz o pedido. Isto impede que alguém abra o Sheets diretamente pelo URL.</p>
+
+<h4>Nível 3 — Rate Limit no Login</h4>
+<p>O Sheets Mestre limita as tentativas de login: máximo <strong>5 tentativas por ID a cada 15 minutos</strong>. Depois disso, o sistema bloqueia temporariamente esse ID.</p>
+
+<h4>Nível 4 — Filtro por Tipo de Utilizador</h4>
+<p>Cada pedido inclui o tipo de quem o faz (<code>prof</code> ou <code>aluno</code>). Os alunos estão limitados a ações seguras (votar, autoavaliar, marcar presença, assinar tomada de conhecimento). Ações como <code>clearVotes</code>, <code>deleteAutoAvSheet</code> ou <code>saveConfig</code> são exclusivas do professor.</p>
+
+<h4>Auto-publish de Sessões</h4>
+<p>Quando o professor abre ou fecha uma sessão de aula, a configuração é automaticamente publicada para o Sheets. Isto garante que os terminais ESP32 RFID conseguem encontrar a sessão aberta.</p>
+
+</section>
+<section>
+<h2 id="ref-login"><span class="sec-num">27</span> 🔑 Login Centralizado (Opção C)</h2>
+
+<p>O sistema suporta <strong>autenticação centralizada</strong> via um Google Sheets Mestre. Os alunos e o professor fazem login com nº de aluno (ou username) e password — o sistema configura tudo automaticamente.</p>
+
+<h4>Fluxo do Aluno</h4>
+<ol class="steps">
+  <li>Abre o <strong>index.html</strong> (link do GitHub Pages)</li>
+  <li>Introduz o <strong>Nº de Aluno</strong> e a <strong>Password</strong></li>
+  <li>O sistema valida no Sheets Mestre e redireciona para o Aluno.html</li>
+  <li>O URL do Sheets da turma, nome, código de estágio e código de aulas são configurados automaticamente</li>
+  <li>A sessão dura <strong>7 dias</strong> — depois precisa de re-login</li>
+</ol>
+
+<h4>O que muda para o aluno</h4>
+<ul>
+  <li>Não precisa de colar o URL do Sheets manualmente</li>
+  <li>Na autoavaliação, o nome é pré-preenchido automaticamente</li>
+  <li>Nas presenças e aulas, os códigos são aplicados nos bastidores</li>
+  <li>Todos os registos no Sheets incluem o Nº Aluno para rastreabilidade</li>
+</ul>
+
+<h4>Configuração do Sheets Mestre</h4>
+<ol class="steps">
+  <li>Cria um Google Sheets novo (separado dos de turma)</li>
+  <li>Vai a <strong>Extensões → Apps Script</strong>, cola o conteúdo de <code>Code_Mestre.gs</code></li>
+  <li>Implementa como <strong>Aplicação Web</strong> (Executar como: Eu, Acesso: Qualquer pessoa)</li>
+  <li>No Sheets, cria a folha <strong>"Utilizadores"</strong> com os cabeçalhos:<br>
+    <code>Tipo | ID | Nome | Password (hash) | Turma | Sheets URL | Código Estágio | Código Aulas | Pwd Aulas | Ativo | UID RFID | Criado Em</code></li>
+  <li>Preenche uma linha por aluno/professor</li>
+  <li>No <code>index.html</code>, edita a linha <code>HARDCODED_MESTRE_URL</code> com o URL do Apps Script</li>
+</ol>
+
+<div class="card tip">
+  <span class="card-icon">💡</span>
+  <div>Para gerar o hash da password, abre a consola do browser (F12) no index.html e escreve: <code>hashPwd('password123')</code>. Ou adiciona a password em texto claro — o sistema faz hash automaticamente no primeiro login.</div>
+</div>
+
+
+
+<h4>Preparação para RFID</h4>
+<p>A coluna <strong>"UID RFID"</strong> na folha Utilizadores permite futuramente associar cartões de aluno a terminais ESP32 com leitor RFID. O <code>Code_Mestre.gs</code> já inclui as ações <code>rfidLookup</code> e <code>rfidPresenca</code> para este efeito.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- REFERÊNCIA -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-sheets"><span class="sec-num">28</span> 📊 Folhas do Google Sheets</h2>
+
+<p>As folhas são criadas automaticamente quando os dados chegam:</p>
+
+<table>
+  <tr><th>Folha</th><th>Criada por</th><th>Conteúdo</th></tr>
+  <tr><td><strong>Configuração</strong></td><td>Professor (📡 Publicar)</td><td>JSON com toda a config — lida pelo Aluno.html</td></tr>
+  <tr><td><strong>Votos</strong></td><td>Alunos (Pares)</td><td>Avaliações com critérios dinâmicos</td></tr>
+  <tr><td><strong>Votos Individuais</strong></td><td>Alunos (Pares)</td><td>Avaliação por membro do grupo</td></tr>
+  <tr><td><strong>Avaliação Professor</strong></td><td>Professor</td><td>Notas do professor por grupo</td></tr>
+  <tr><td><strong>Resumo Pares</strong></td><td>Professor</td><td>Médias calculadas por grupo</td></tr>
+  <tr><td><strong>Resumo Professor</strong></td><td>Professor</td><td>Ranking com pesos e critérios</td></tr>
+  <tr><td><strong>Sorteio</strong></td><td>Professor</td><td>Ordem de apresentação</td></tr>
+  <tr><td><strong>AA_&lt;DISC&gt;</strong></td><td>Alunos</td><td>Um tab por disciplina/UFCD</td></tr>
+  <tr><td><strong>Presenças Estágio</strong></td><td>Alunos (GPS)</td><td>Entrada/saída com coordenadas e pontualidade</td></tr>
+  <tr><td><strong>Feedback Estágio</strong></td><td>Alunos</td><td>Descrição e avaliação diária</td></tr>
+  <tr><td><strong>Presenças Aulas</strong></td><td>Alunos</td><td>Presença com atraso e feedback</td></tr>
+  <tr><td><strong>Registo</strong></td><td>Sistema</td><td>Log interno de todas as ações</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="ref-problemas"><span class="sec-num">29</span> 🔧 Resolução de Problemas</h2>
+
+<table>
+  <tr><th>Problema</th><th>Causa</th><th>Solução</th></tr>
+  <tr><td>GitHub Pages 404</td><td>Branch ou pasta errada</td><td>Settings → Pages → main / root</td></tr>
+  <tr><td>Aluno não carrega config</td><td>Professor não publicou</td><td>📡 Publicar no Professor.html</td></tr>
+  <tr><td>"Não foi possível ligar"</td><td>URL do Apps Script errado</td><td>Verifica o URL (≠ URL do Sheets)</td></tr>
+  <tr><td>"App não verificada"</td><td>Normal para scripts pessoais</td><td>Avançado → Ir para (nome)</td></tr>
+  <tr><td>Dados não aparecem</td><td>Apps Script desatualizado</td><td>Nova implementação no Apps Script</td></tr>
+  <tr><td>Aluno pede URL outra vez</td><td>Limpou dados do browser</td><td>Cola novamente (única vez)</td></tr>
+  <tr><td>GPS sem precisão</td><td>Interior / GPS desativado</td><td>Ativar GPS; sair ao ar livre</td></tr>
+  <tr><td>Sessão de aula não aparece</td><td>Sessão não está "aberta"</td><td>Professor: Sessões → ▶ Abrir</td></tr>
+  <tr><td>Horas não contam pausas</td><td>Pausa não foi terminada</td><td>Aluno: ▶ Retomar antes da saída</td></tr>
+  <tr><td>Folhas não criadas</td><td>Primeira utilização</td><td>São criadas automaticamente ao primeiro uso</td></tr>
+</table>
+
+<div class="card info" style="margin-top:20px">
+  <span class="card-icon">📧</span>
+  <div>Para problemas não listados, verifica a folha <strong>"Registo"</strong> no Google Sheets — contém o log de todas as ações e erros.</div>
+</div>
+
+<div style="margin-top:40px;padding-top:20px;border-top:2px solid var(--border);text-align:center;color:var(--muted);font-size:.78rem">
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FERRAMENTAS TÉCNICAS                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="setup-alunos"><span class="sec-num">4</span> Distribuir aos Alunos</h2>
+<p>Com o login centralizado, basta partilhar o <strong>link do index.html</strong> (a página de entrada do Nexus). Os alunos abrem o link, fazem login com nº de aluno + password, e acedem automaticamente à sua turma.</p>
+<p>Opcionalmente, pode gerar um QR code com o link do index para afixar na sala.</p>
+
+
+<h3>Folha "Turmas" no Sheets Mestre</h3>
+<p>O Sheets Mestre tem uma folha <strong>"Turmas"</strong> que mapeia cada turma ao respetivo Google Sheets da turma. Quando um aluno faz login, o sistema resolve automaticamente o URL pela turma do aluno — sem precisar de o guardar em cada linha de utilizador.</p>
+<p>Para sincronizar, no Professor vá a <strong>🏫 Gestão de Turmas</strong> e clique <strong>📡</strong> na turma desejada.</p>
+
+<h3>Configuração Avançada — URL do Google Sheets</h3>
+<p>A secção de URL do Google Sheets está agora oculta por defeito em <strong>⚙️ Configuração Avançada</strong> no painel de Gerir. Com o login centralizado, o URL é configurado automaticamente. Use apenas esta secção se precisar de configurar manualmente (ex: dispositivo sem login).</p>
+
+<section>
+<h2 id="prof-gerir"><span class="sec-num">5</span> ⚙️ Gerir — Painel de Administração</h2>
+
+<p>Acedido pelo botão <strong>⚙️ Gerir</strong> na barra superior (protegido por senha, predefinição: <code>eac2025</code>).</p>
+
+<h3>O que podes fazer</h3>
+<div class="shortcut-grid">
+  <div class="shortcut-card"><div class="sc-icon">📡</div><div class="sc-title">Publicar</div><div class="sc-desc">Envia toda a config para o Sheets</div></div>
+  <div class="shortcut-card"><div class="sc-icon">📲</div><div class="sc-title">QR Code</div><div class="sc-desc">Gera QR único para alunos</div></div>
+  <div class="shortcut-card"><div class="sc-icon">🗳️</div><div class="sc-title">Pares</div><div class="sc-desc">Sessão, grupos, critérios</div></div>
+  <div class="shortcut-card"><div class="sc-icon">✍️</div><div class="sc-title">Autoavaliação</div><div class="sc-desc">Vetores, pesos, disciplina</div></div>
+  <div class="shortcut-card"><div class="sc-icon">📍</div><div class="sc-title">Estágio</div><div class="sc-desc">Alunos, locais GPS, horários</div></div>
+  <div class="shortcut-card"><div class="sc-icon">📝</div><div class="sc-title">Aulas</div><div class="sc-desc">Alunos, sessões, presenças</div></div>
+  <div class="shortcut-card"><div class="sc-icon">☁️</div><div class="sc-title">Google Sheets</div><div class="sc-desc">URL, teste de ligação</div></div>
+  <div class="shortcut-card"><div class="sc-icon">🔑</div><div class="sc-title">Senhas</div><div class="sc-desc">3 senhas independentes</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-publicar"><span class="sec-num">6</span> 📡 Publicar Configuração</h2>
+
+<p>O botão <strong>📡 Publicar Configuração</strong> (topo do painel Gerir) envia toda a configuração para a folha "Configuração" do Google Sheets. O ficheiro do <strong>Aluno</strong> lê automaticamente esta configuração ao abrir.</p>
+
+<div class="card info">
+  <span class="card-icon">🔄</span>
+  <div>Sempre que alterares a configuração (novos alunos, nova sessão de aula, novo local), clica <strong>📡 Publicar</strong> para os alunos receberem as alterações.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-pares"><span class="sec-num">7</span> 🗳️ Avaliação de Pares</h2>
+
+<h4>Configuração (⚙️ Gerir → Configuração de Pares)</h4>
+<p>Define a sessão (turma, curso, tipo), os grupos e membros, e os critérios de avaliação (até 10, com emoji, descrição, escala 1–5★). Os critérios são convertidos para 0–20 valores automaticamente.</p>
+
+<h4>Fluxo do Aluno</h4>
+<p>O aluno seleciona o grupo que está a apresentar → avalia com estrelas em cada critério → opcionalmente avalia cada membro individualmente → submete. Cada dispositivo só pode votar uma vez por grupo.</p>
+
+<h4>Resultados (📈 Resultados)</h4>
+<p>Ranking por média, comparação entre grupos, comentários e avaliação individual por membro. Importação de votos do Sheets para ver resultados em qualquer dispositivo.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-autoav"><span class="sec-num">8</span> ✍️ Autoavaliação</h2>
+
+<p>Define vetores (ex: Assiduidade, Participação, Trabalho), cada um com peso percentual e até 4 características. Os alunos avaliam-se de 1–5★ em cada característica. A nota final é ponderada pelos pesos.</p>
+
+<p>Suporta múltiplas disciplinas/UFCDs — cada uma cria um tab separado no Sheets (ex: <code>AA_EAC</code>, <code>AA_UFCD6025</code>).</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-estagio"><span class="sec-num">9</span> 📍 Presenças de Estágio</h2>
+
+<h4>Configuração (⚙️ Gerir → 📍 Presenças de Estágio)</h4>
+
+<table>
+  <tr><th>Separador</th><th>O que configurar</th></tr>
+  <tr><td><strong>📊 Painel</strong></td><td>Vista diária em tempo real de todos os alunos</td></tr>
+  <tr><td><strong>👥 Alunos</strong></td><td>Até 20 alunos, cada um com código de 4 dígitos e local atribuído</td></tr>
+  <tr><td><strong>📍 Locais</strong></td><td>Coordenadas GPS, raio, horário de entrada/saída por local</td></tr>
+  <tr><td><strong>📄 Relatórios</strong></td><td>Relatório individual filtrável, impressão, CSV</td></tr>
+</table>
+
+<h4>Horário e Pontualidade</h4>
+<p>Define horário global (ex: 09:00–17:30) com tolerâncias configuráveis. Cada local pode ter horário próprio. Ao marcar entrada:</p>
+
+<table>
+  <tr><th>Atraso</th><th>Estado</th></tr>
+  <tr><td>≤ 10 min</td><td><span class="badge badge-green">✅ Presente</span></td></tr>
+  <tr><td>10–15 min</td><td><span class="badge badge-gold">⚠️ Falta de pontualidade</span></td></tr>
+  <tr><td>> 15 min</td><td><span class="badge badge-red">❌ Falta</span></td></tr>
+</table>
+
+<h4>GPS</h4>
+<p>O sistema verifica se o aluno está dentro do raio do local atribuído. Cada registo inclui coordenadas, distância ao centro, e indicação "No estágio?" (Sim/Não).</p>
+
+<h4>Pausas</h4>
+<p>O aluno pode registar pausas (🍽️ Almoço, ☕ Lanche, 🚶 Intervalo, ou motivo personalizado) sem ter de fazer saída + nova entrada. As pausas têm cronómetro em tempo real e são subtraídas automaticamente das horas contabilizadas.</p>
+
+<h4>Feedback Diário</h4>
+<p>Após marcar entrada, o aluno pode opcionalmente descrever o que fez e avaliar o dia de 0 a 10.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-aulas"><span class="sec-num">10</span> 📝 Aulas Práticas</h2>
+
+<h4>Configuração (⚙️ Gerir → 📝 Aulas Práticas)</h4>
+
+<table>
+  <tr><th>Separador</th><th>O que configurar</th></tr>
+  <tr><td><strong>📅 Sessões</strong></td><td>Disciplina, módulo, sumário, data, hora início, duração, tolerâncias</td></tr>
+  <tr><td><strong>👥 Alunos</strong></td><td>Até 20 alunos, cada um com código + palavra-passe individual</td></tr>
+  <tr><td><strong>📊 Painel</strong></td><td>Vista em tempo real da sessão ativa</td></tr>
+  <tr><td><strong>📄 Relatórios</strong></td><td>Relatório por aluno/disciplina, impressão, CSV</td></tr>
+</table>
+
+<h4>Criar sessão de aula</h4>
+<p>Preenche disciplina, módulo (opcional), sumário (visível ao aluno), data, hora início, duração e tolerâncias. Clica <strong>📅 Criar e Abrir Sessão</strong>. Só pode haver <strong>uma sessão ativa</strong> de cada vez.</p>
+
+<h4>Fluxo do Aluno</h4>
+<p>Introduz código + palavra-passe → vê a sessão ativa com sumário → clica <strong>✋ Marcar Presença</strong> → recebe estado automático (Presente / Pontualidade / Falta) → pode registar pausas → pode escrever feedback e avaliar a aula de 0 a 10.</p>
+
+<h4>Barras de progresso</h4>
+<p>O painel do professor mostra barras de horas acumuladas por aluno, com contagem de presenças, pontualidade e faltas.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-relatorios"><span class="sec-num">11</span> 📄 Relatórios</h2>
+
+<p>Cada secção (Estágio e Aulas) tem um separador de relatórios que permite:</p>
+<ul>
+  <li>Filtrar por <strong>aluno</strong> e <strong>disciplina/período</strong></li>
+  <li>Gerar relatório detalhado com tabela dia-a-dia</li>
+  <li><strong>🖨️ Imprimir</strong> — abre janela de impressão formatada</li>
+  <li><strong>📊 CSV</strong> — exporta para Excel/Calc</li>
+</ul>
+
+<p>Os relatórios incluem: data, horários de entrada/saída/marcação, atrasos, estados, pausas, avaliação diária e feedback do aluno.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-novaturma"><span class="sec-num">12</span> 🔄 Nova Turma / Ano Letivo</h2>
+
+<p>No fim do ano, em <strong>⚙️ Gerir → Nova Turma</strong>:</p>
+
+<table>
+  <tr><th>Ação</th><th>O que faz</th></tr>
+  <tr><td><strong>💾 Exportar Template</strong></td><td>Guarda ficheiro JSON com locais, critérios, horários (sem alunos/dados)</td></tr>
+  <tr><td><strong>📂 Importar Template</strong></td><td>Carrega a estrutura de um template anterior</td></tr>
+  <tr><td><strong>🔄 Nova Turma (mesmo Sheets)</strong></td><td>Apaga alunos e dados, mantém estrutura e Sheets (dados ficam como arquivo)</td></tr>
+  <tr><td><strong>🆕 Nova Turma + Novo Sheets</strong></td><td>Apaga tudo incluindo URL — terás de criar Sheets novo</td></tr>
+</table>
+
+<div class="card tip">
+  <span class="card-icon">📥</span>
+  <div>Ambos os botões de "Nova Turma" exportam um <strong>backup completo automático</strong> antes de apagar.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ALUNO -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="aluno-acesso"><span class="sec-num">13</span> 🔑 Acesso do Aluno</h2>
+
+<p>Na primeira utilização, o aluno abre o link do <strong>Aluno.html</strong> e cola o URL do Google Sheets (fornecido pelo professor). O URL fica guardado no telemóvel com <strong>validade de um dia</strong> — à meia-noite expira e pede novo login nas secções que requerem código.</p>
+
+<p>A configuração (grupos, sessões, locais) é carregada automaticamente do Sheets a cada abertura.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-pares"><span class="sec-num">14</span> 🗳️ Votar — Avaliação de Pares</h2>
+
+<ol class="steps">
+  <li>Seleciona o grupo que está a apresentar</li>
+  <li>Avalia cada critério com 1–5 estrelas</li>
+  <li>Opcionalmente avalia os membros individualmente</li>
+  <li>Opcionalmente deixa um comentário</li>
+  <li>Clica <strong>✓ Submeter Avaliação</strong></li>
+</ol>
+
+<div class="card info">
+  <span class="card-icon">🔒</span>
+  <div>A avaliação é <strong>totalmente anónima</strong> — nenhum nome é associado às notas. Cada dispositivo só pode avaliar cada grupo uma vez.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-autoav"><span class="sec-num">15</span> ✍️ Autoavaliação</h2>
+
+<ol class="steps">
+  <li>Introduz o primeiro e último nome</li>
+  <li>Avalia cada característica de cada vetor com 1–5 estrelas</li>
+  <li>A nota final é calculada automaticamente com os pesos definidos pelo professor</li>
+  <li>Clica <strong>✅ Submeter</strong></li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-estagio"><span class="sec-num">16</span> 📍 Presenças de Estágio</h2>
+
+<ol class="steps">
+  <li>Introduz o <strong>código de acesso</strong> (4 dígitos, fornecido pelo professor)</li>
+  <li>Vê o estado GPS (dentro/fora do raio do local de estágio)</li>
+  <li>Clica <strong>▶ Marcar Entrada</strong> — o sistema regista coordenadas e calcula pontualidade</li>
+  <li>Durante o dia, pode registar pausas (almoço, lanche, etc.) com cronómetro</li>
+  <li>Pode escrever o que fez hoje e avaliar o dia de 0 a 10</li>
+  <li>No fim, clica <strong>⏹ Marcar Saída</strong></li>
+</ol>
+
+<div class="card warning">
+  <span class="card-icon">📡</span>
+  <div>O GPS deve estar ativo no telemóvel. A precisão varia com o dispositivo e ambiente (melhor ao ar livre). O raio de tolerância é configurável pelo professor.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="aluno-aulas"><span class="sec-num">17</span> 📝 Presenças em Aulas</h2>
+
+<ol class="steps">
+  <li>Introduz <strong>código</strong> + <strong>palavra-passe</strong></li>
+  <li>Vê a aula ativa (disciplina, módulo, sumário, horário)</li>
+  <li>Clica <strong>✋ Marcar Presença</strong></li>
+  <li>Recebe estado automático: <span class="badge badge-green">✅ Presente</span> / <span class="badge badge-gold">⚠️ Pontualidade</span> / <span class="badge badge-red">❌ Falta</span></li>
+  <li>Pode registar pausas e escrever feedback</li>
+</ol>
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-horarios"><span class="sec-num">18</span> ⏰ Horários de Estágio</h2>
+
+<p>O sistema verifica a <strong>pontualidade</strong> dos alunos ao marcar entrada no estágio, com base num horário configurável.</p>
+
+<h4>Horário global (⚙️ Gerir → 📍 Presenças → 👥 Alunos)</h4>
+<p>Na card "Configuração de Horas e Horário", define:</p>
+<table>
+  <tr><th>Campo</th><th>Default</th><th>Descrição</th></tr>
+  <tr><td>Hora de entrada</td><td>09:00</td><td>Hora esperada de chegada</td></tr>
+  <tr><td>Hora de saída</td><td>17:30</td><td>Hora esperada de saída</td></tr>
+  <tr><td>Tolerância pontualidade</td><td>10 min</td><td>Até este atraso = Presente</td></tr>
+  <tr><td>Tolerância falta</td><td>15 min</td><td>Acima disto = Falta</td></tr>
+</table>
+
+<h4>Horário por local</h4>
+<p>Cada local de estágio pode ter <strong>horário próprio</strong> (em 📍 Locais). Se definido, sobrepõe o horário global para os alunos desse local. Útil quando diferentes empresas têm horários distintos.</p>
+
+<h4>Cálculo automático</h4>
+<p>Quando o aluno marca entrada:</p>
+<table>
+  <tr><th>Atraso</th><th>Estado</th></tr>
+  <tr><td>≤ tolerância pontualidade</td><td><span class="badge badge-green">✅ Presente</span></td></tr>
+  <tr><td>Entre pontualidade e falta</td><td><span class="badge badge-gold">⚠️ Falta de pontualidade</span></td></tr>
+  <tr><td>> tolerância falta</td><td><span class="badge badge-red">❌ Falta</span></td></tr>
+</table>
+
+<p>O estado e minutos de atraso ficam registados no Google Sheets (colunas "Atraso" e "Pontualidade") com formatação colorida automática.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-multiav"><span class="sec-num">19</span> 📚 Multi-Autoavaliação</h2>
+
+<p>O sistema suporta <strong>múltiplas autoavaliações simultâneas</strong> na mesma turma — por exemplo, UFCD 6025, UFCD 6026 e EAC ao mesmo tempo.</p>
+
+<h4>Configuração (Professor)</h4>
+<ol class="steps">
+  <li>Vai a <strong>⚙️ Gerir → ✍️ Autoavaliação</strong></li>
+  <li>Configura a primeira disciplina (nome, vetores, pesos)</li>
+  <li>Clica <strong>💾 Guardar Atual na Lista</strong></li>
+  <li>Clica <strong>＋ Adicionar Disciplina</strong> e repete para cada disciplina</li>
+  <li>Clica <strong>📡 Publicar</strong> para enviar todas para os alunos</li>
+</ol>
+
+<h4>Fluxo do Aluno</h4>
+<p>Se houver mais de uma disciplina, o aluno vê um ecrã com <strong>cards</strong> — uma por disciplina. Clica numa, preenche, submete. Após submeter, vê um ecrã de sucesso com três opções:</p>
+<ul>
+  <li><strong>🔄 Repetir</strong> — corrigir erros ou outro aluno preencher no mesmo dispositivo</li>
+  <li><strong>📚 Outra disciplina</strong> — volta à seleção</li>
+  <li><strong>🏠 Início</strong> — volta ao ecrã principal</li>
+</ul>
+<p>As disciplinas já submetidas ficam marcadas com <span class="badge badge-green">✅</span>.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="prof-turmas"><span class="sec-num">20</span> 🏫 Gestão de Turmas</h2>
+
+<p>O sistema suporta <strong>múltiplas turmas em simultâneo</strong> no mesmo browser, cada uma com os seus dados e Google Sheets independentes.</p>
+
+<h4>Criar turma</h4>
+<ol class="steps">
+  <li>Clica no <strong>＋</strong> ao lado do seletor de turma (barra superior)</li>
+  <li>Preenche o nome (ex: "3.ºB EAC"), ano letivo, e URL do Sheets</li>
+  <li>Clica <strong>➕ Criar Turma</strong></li>
+</ol>
+
+<h4>Alternar entre turmas</h4>
+<p>Seleciona a turma no dropdown da barra superior. A página recarrega com os dados dessa turma.</p>
+
+<h4>Importar backup</h4>
+<p>No modal de turmas, clica <strong>📂 Importar Backup</strong> para criar uma turma a partir de um ficheiro JSON de backup anterior.</p>
+
+<h4>Recuperar após limpar cookies</h4>
+<ol class="steps">
+  <li>Cria a turma com o URL do Sheets que tinhas</li>
+  <li>Vai a <strong>⚙️ Gerir → 📥 Importar do Sheets</strong></li>
+  <li>Toda a configuração publicada é recuperada</li>
+</ol>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="ref-offline"><span class="sec-num">21</span> 📵 Modo Offline</h2>
+
+<p>Quando o dispositivo perde ligação à internet, aparece um <strong>banner vermelho</strong> no topo:</p>
+<div class="card warning">
+  <span class="card-icon">📵</span>
+  <div>Sem ligação à internet — os dados ficam guardados e serão enviados quando a rede voltar.</div>
+</div>
+
+<p>O que funciona offline:</p>
+<ul>
+  <li>A interface continua funcional (todos os dados estão em localStorage)</li>
+  <li>Votos e presenças são guardados localmente</li>
+  <li>Quando a rede volta, os votos em fila são enviados automaticamente</li>
+</ul>
+
+<p>O que <strong>não</strong> funciona offline: publicar configuração, importar do Sheets, submeter autoavaliações.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="ref-qrsessao"><span class="sec-num">22</span> 📲 QR por Sessão de Aula</h2>
+
+<p>Cada sessão de aula <strong>aberta</strong> tem um botão <strong>📲 QR</strong> que gera um QR code projetável com:</p>
+<ul>
+  <li>Link direto para o Aluno.html</li>
+  <li>Nome da disciplina e módulo</li>
+  <li>Horário da sessão</li>
+  <li>Sumário (se definido)</li>
+</ul>
+
+<p>O professor projeta o QR na sala → os alunos leem com o telemóvel → abrem o sistema → introduzem código + senha → marcam presença.</p>
+
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- LOGIN CENTRALIZADO                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+
+</section>
+<section>
+<h2 id="ref-horario"><span class="sec-num">23</span> 📅 Horário Semanal</h2>
+
+<p>O separador <strong>📅 Horário</strong> (dentro de 📝 Aulas Práticas) permite definir o horário semanal e gerar sessões automaticamente.</p>
+
+<h4>Definir o Horário</h4>
+<ol class="steps">
+  <li>Vai a <strong>📝 Aulas → 📅 Horário</strong></li>
+  <li>Para cada aula: seleciona dia, hora início, hora fim, disciplina e módulo</li>
+  <li>Clica <strong>＋ Adicionar</strong> — o slot aparece na tabela</li>
+  <li>O horário é completamente flexível: qualquer hora, qualquer duração</li>
+</ol>
+
+<h4>Gerar Sessões da Semana</h4>
+<ol class="steps">
+  <li>Clica <strong>📅 Gerar Sessões da Semana</strong></li>
+  <li>Indica a data da segunda-feira (sugerida automaticamente)</li>
+  <li>O sistema cria todas as sessões com datas concretas</li>
+  <li>Sessões duplicadas são ignoradas — seguro para re-gerar</li>
+  <li>Vai ao separador <strong>📅 Sessões</strong> e clica <strong>▶ Abrir</strong> na aula que vais dar</li>
+</ol>
+
+<h4>Exportar e Importar</h4>
+<p>O horário pode ser guardado como ficheiro <code>.horario.json</code> e reutilizado todos os períodos. O ficheiro é pequeno e contém apenas a estrutura do horário, não as sessões geradas.</p>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TOMADA DE CONHECIMENTO                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-tc"><span class="sec-num">24</span> 📋 Tomada de Conhecimento</h2>
+
+<p>A <strong>Tomada de Conhecimento</strong> permite ao professor dar a conhecer os critérios de avaliação e planificações de cada UFCD antes de iniciar a autoavaliação. Os alunos consultam e assinam digitalmente.</p>
+
+<h4>Configuração (Professor)</h4>
+<ol class="steps">
+  <li>Vai a <strong>⚙️ Gerir → ✍️ Autoavaliação</strong></li>
+  <li>Cria ou edita uma disciplina/UFCD</li>
+  <li>No campo <strong>Estado</strong>, seleciona:
+    <ul>
+      <li><strong>🔴 Inativa</strong> — não visível para alunos</li>
+      <li><strong>📋 Tomada de Conhecimento</strong> — aluno vê critérios + docs + assina</li>
+      <li><strong>✍️ Autoavaliação</strong> — aluno preenche a autoavaliação</li>
+      <li><strong>📋+✍️ Ambas</strong> — ambas as fases ativas em simultâneo</li>
+    </ul>
+  </li>
+  <li>Em <strong>📎 Documentos e Planificações</strong>, adiciona links para o Google Drive:
+    <ul>
+      <li>Planificação Anual</li>
+      <li>Planificação Modular</li>
+      <li>Programa da UFCD</li>
+      <li>Outros documentos relevantes</li>
+    </ul>
+  </li>
+  <li>Clica <strong>💾 Guardar Disciplina</strong> e depois <strong>📡 Publicar</strong></li>
+</ol>
+
+<h4>Fluxo do Aluno</h4>
+<ol class="steps">
+  <li>No menu, seleciona <strong>📋 Tomada de Conhecimento</strong></li>
+  <li>Vê as UFCDs com fase de conhecimento ativa</li>
+  <li>Clica nos links para consultar planificações (abrem no Drive)</li>
+  <li>Expande <strong>▶ Critérios de Avaliação</strong> para ver vetores e características</li>
+  <li>Marca a checkbox, desenha a <strong>assinatura digital</strong> com o dedo (telemóvel) ou rato (PC), e clica <strong>✅ Assinar</strong></li>
+  <li>O registo é enviado para o Sheets da turma (folha "Tomada Conhecimento")</li>
+</ol>
+
+<div class="card tip">
+  <span class="card-icon">💡</span>
+  <div>Os links do Google Drive devem apontar para ficheiros ou pastas com acesso público (ou acesso por link). Para partilhar uma pasta: no Drive, clica com botão direito → Partilhar → Qualquer pessoa com o link.</div>
+</div>
+
+<h4>Campo Nº UFCD</h4>
+<p>Cada disciplina tem agora um campo <strong>Nº UFCD</strong> separado do nome. Quando preenchido, o tab do Sheets é nomeado como <code>AA_UFCD6016</code> em vez de gerar uma abreviatura. O Nº UFCD aparece nos cards do aluno, no hero header, e como coluna no Sheets.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- IMPORTAR DO MESTRE                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-import-mestre"><span class="sec-num">25</span> 📥 Importar do Mestre</h2>
+
+<p>Nas secções de <strong>📝 Aulas Práticas</strong> e <strong>📍 Presenças de Estágio</strong>, o botão <strong>📥 Importar do Mestre</strong> puxa automaticamente os alunos do Sheets Mestre para a turma ativa.</p>
+<ul>
+  <li>Usa os códigos de estágio e aulas definidos no Sheets Mestre</li>
+  <li>Alunos que já existam na lista são ignorados (sem duplicados)</li>
+  <li>Requer que o login tenha sido feito pelo index.html (para o URL do Mestre estar em localStorage)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SEGURANÇA                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-seguranca"><span class="sec-num">26</span> 🔒 Segurança (4 Níveis)</h2>
+
+<p>O sistema implementa 4 níveis de segurança complementares:</p>
+
+<h4>Nível 1 — Token Secreto</h4>
+<p>Todos os pedidos ao Google Apps Script incluem um token secreto. Pedidos sem token válido são rejeitados com "Acesso negado." O token é definido na constante <code>API_TOKEN</code> e deve ser igual em todos os ficheiros (index, Professor, Aluno, Code.gs, Code_Mestre.gs, firmware ESP32).</p>
+
+<h4>Nível 2 — Sheets Privado</h4>
+<p>Os Google Sheets devem ser configurados como <strong>Restritos</strong> (Partilhar → Apenas tu). O Apps Script acede como o dono, independentemente de quem faz o pedido. Isto impede que alguém abra o Sheets diretamente pelo URL.</p>
+
+<h4>Nível 3 — Rate Limit no Login</h4>
+<p>O Sheets Mestre limita as tentativas de login: máximo <strong>5 tentativas por ID a cada 15 minutos</strong>. Depois disso, o sistema bloqueia temporariamente esse ID.</p>
+
+<h4>Nível 4 — Filtro por Tipo de Utilizador</h4>
+<p>Cada pedido inclui o tipo de quem o faz (<code>prof</code> ou <code>aluno</code>). Os alunos estão limitados a ações seguras (votar, autoavaliar, marcar presença, assinar tomada de conhecimento). Ações como <code>clearVotes</code>, <code>deleteAutoAvSheet</code> ou <code>saveConfig</code> são exclusivas do professor.</p>
+
+<h4>Auto-publish de Sessões</h4>
+<p>Quando o professor abre ou fecha uma sessão de aula, a configuração é automaticamente publicada para o Sheets. Isto garante que os terminais ESP32 RFID conseguem encontrar a sessão aberta.</p>
+
+</section>
+<section>
+<h2 id="ref-login"><span class="sec-num">27</span> 🔑 Login Centralizado (Opção C)</h2>
+
+<p>O sistema suporta <strong>autenticação centralizada</strong> via um Google Sheets Mestre. Os alunos e o professor fazem login com nº de aluno (ou username) e password — o sistema configura tudo automaticamente.</p>
+
+<h4>Fluxo do Aluno</h4>
+<ol class="steps">
+  <li>Abre o <strong>index.html</strong> (link do GitHub Pages)</li>
+  <li>Introduz o <strong>Nº de Aluno</strong> e a <strong>Password</strong></li>
+  <li>O sistema valida no Sheets Mestre e redireciona para o Aluno.html</li>
+  <li>O URL do Sheets da turma, nome, código de estágio e código de aulas são configurados automaticamente</li>
+  <li>A sessão dura <strong>7 dias</strong> — depois precisa de re-login</li>
+</ol>
+
+<h4>O que muda para o aluno</h4>
+<ul>
+  <li>Não precisa de colar o URL do Sheets manualmente</li>
+  <li>Na autoavaliação, o nome é pré-preenchido automaticamente</li>
+  <li>Nas presenças e aulas, os códigos são aplicados nos bastidores</li>
+  <li>Todos os registos no Sheets incluem o Nº Aluno para rastreabilidade</li>
+</ul>
+
+<h4>Configuração do Sheets Mestre</h4>
+<ol class="steps">
+  <li>Cria um Google Sheets novo (separado dos de turma)</li>
+  <li>Vai a <strong>Extensões → Apps Script</strong>, cola o conteúdo de <code>Code_Mestre.gs</code></li>
+  <li>Implementa como <strong>Aplicação Web</strong> (Executar como: Eu, Acesso: Qualquer pessoa)</li>
+  <li>No Sheets, cria a folha <strong>"Utilizadores"</strong> com os cabeçalhos:<br>
+    <code>Tipo | ID | Nome | Password (hash) | Turma | Sheets URL | Código Estágio | Código Aulas | Pwd Aulas | Ativo | UID RFID | Criado Em</code></li>
+  <li>Preenche uma linha por aluno/professor</li>
+  <li>No <code>index.html</code>, edita a linha <code>HARDCODED_MESTRE_URL</code> com o URL do Apps Script</li>
+</ol>
+
+<div class="card tip">
+  <span class="card-icon">💡</span>
+  <div>Para gerar o hash da password, abre a consola do browser (F12) no index.html e escreve: <code>hashPwd('password123')</code>. Ou adiciona a password em texto claro — o sistema faz hash automaticamente no primeiro login.</div>
+</div>
+
+
+
+<h4>Preparação para RFID</h4>
+<p>A coluna <strong>"UID RFID"</strong> na folha Utilizadores permite futuramente associar cartões de aluno a terminais ESP32 com leitor RFID. O <code>Code_Mestre.gs</code> já inclui as ações <code>rfidLookup</code> e <code>rfidPresenca</code> para este efeito.</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- REFERÊNCIA -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="ref-sheets"><span class="sec-num">28</span> 📊 Folhas do Google Sheets</h2>
+
+<p>As folhas são criadas automaticamente quando os dados chegam:</p>
+
+<table>
+  <tr><th>Folha</th><th>Criada por</th><th>Conteúdo</th></tr>
+  <tr><td><strong>Configuração</strong></td><td>Professor (📡 Publicar)</td><td>JSON com toda a config — lida pelo Aluno.html</td></tr>
+  <tr><td><strong>Votos</strong></td><td>Alunos (Pares)</td><td>Avaliações com critérios dinâmicos</td></tr>
+  <tr><td><strong>Votos Individuais</strong></td><td>Alunos (Pares)</td><td>Avaliação por membro do grupo</td></tr>
+  <tr><td><strong>Avaliação Professor</strong></td><td>Professor</td><td>Notas do professor por grupo</td></tr>
+  <tr><td><strong>Resumo Pares</strong></td><td>Professor</td><td>Médias calculadas por grupo</td></tr>
+  <tr><td><strong>Resumo Professor</strong></td><td>Professor</td><td>Ranking com pesos e critérios</td></tr>
+  <tr><td><strong>Sorteio</strong></td><td>Professor</td><td>Ordem de apresentação</td></tr>
+  <tr><td><strong>AA_&lt;DISC&gt;</strong></td><td>Alunos</td><td>Um tab por disciplina/UFCD</td></tr>
+  <tr><td><strong>Presenças Estágio</strong></td><td>Alunos (GPS)</td><td>Entrada/saída com coordenadas e pontualidade</td></tr>
+  <tr><td><strong>Feedback Estágio</strong></td><td>Alunos</td><td>Descrição e avaliação diária</td></tr>
+  <tr><td><strong>Presenças Aulas</strong></td><td>Alunos</td><td>Presença com atraso e feedback</td></tr>
+  <tr><td><strong>Registo</strong></td><td>Sistema</td><td>Log interno de todas as ações</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+</section>
+<section>
+<h2 id="ref-problemas"><span class="sec-num">29</span> 🔧 Resolução de Problemas</h2>
+
+<table>
+  <tr><th>Problema</th><th>Causa</th><th>Solução</th></tr>
+  <tr><td>GitHub Pages 404</td><td>Branch ou pasta errada</td><td>Settings → Pages → main / root</td></tr>
+  <tr><td>Aluno não carrega config</td><td>Professor não publicou</td><td>📡 Publicar no Professor.html</td></tr>
+  <tr><td>"Não foi possível ligar"</td><td>URL do Apps Script errado</td><td>Verifica o URL (≠ URL do Sheets)</td></tr>
+  <tr><td>"App não verificada"</td><td>Normal para scripts pessoais</td><td>Avançado → Ir para (nome)</td></tr>
+  <tr><td>Dados não aparecem</td><td>Apps Script desatualizado</td><td>Nova implementação no Apps Script</td></tr>
+  <tr><td>Aluno pede URL outra vez</td><td>Limpou dados do browser</td><td>Cola novamente (única vez)</td></tr>
+  <tr><td>GPS sem precisão</td><td>Interior / GPS desativado</td><td>Ativar GPS; sair ao ar livre</td></tr>
+  <tr><td>Sessão de aula não aparece</td><td>Sessão não está "aberta"</td><td>Professor: Sessões → ▶ Abrir</td></tr>
+  <tr><td>Horas não contam pausas</td><td>Pausa não foi terminada</td><td>Aluno: ▶ Retomar antes da saída</td></tr>
+  <tr><td>Folhas não criadas</td><td>Primeira utilização</td><td>São criadas automaticamente ao primeiro uso</td></tr>
+</table>
+
+<div class="card info" style="margin-top:20px">
+  <span class="card-icon">📧</span>
+  <div>Para problemas não listados, verifica a folha <strong>"Registo"</strong> no Google Sheets — contém o log de todas as ações e erros.</div>
+</div>
+
+<div style="margin-top:40px;padding-top:20px;border-top:2px solid var(--border);text-align:center;color:var(--muted);font-size:.78rem">
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- FERRAMENTAS TÉCNICAS                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+</section>
+<section>
+<h2 id="tool-ferramentas"><span class="sec-num">30</span> 🔧 Ferramentas Técnicas</h2>
+
+<p>O Nexus inclui duas ferramentas técnicas independentes, cada uma com o seu manual dedicado:</p>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:16px 0">
+  <div style="background:var(--card);border-radius:14px;padding:18px;border:1.5px solid var(--border);border-left:4px solid #22c55e">
+    <div style="font-size:1.4rem;margin-bottom:6px">⊞</div>
+    <div style="font-size:.95rem;font-weight:800;color:var(--navy)">Perfboard Designer</div>
+    <div style="font-size:.78rem;color:var(--muted);margin:4px 0 10px">Projetar ligações em placas PCB pré-perfuradas e breadboards. Biblioteca de componentes, impressão de esquemas.</div>
+    <a href="Nexus_ESECCinfaesCTE_Perfboard.html" style="font-size:.78rem;color:var(--accent);font-weight:600;text-decoration:none">▶ Abrir Ferramenta</a> ·
+    <a href="Nexus_ESECCinfaesCTE_Manual_Perfboard.html" style="font-size:.78rem;color:var(--accent);font-weight:600;text-decoration:none">📖 Manual</a>
+  </div>
+  <div style="background:var(--card);border-radius:14px;padding:18px;border:1.5px solid var(--border);border-left:4px solid #3b82f6">
+    <div style="font-size:1.4rem;margin-bottom:6px">🔌</div>
+    <div style="font-size:.95rem;font-weight:800;color:var(--navy)">Esquemas de Ligação</div>
+    <div style="font-size:.78rem;color:var(--muted);margin:4px 0 10px">Diagramas de cablagem com pinagem, tabela de ligações e lista de material. Impressão em A4.</div>
+    <a href="Nexus_ESECCinfaesCTE_Esquemas.html" style="font-size:.78rem;color:var(--accent);font-weight:600;text-decoration:none">▶ Abrir Ferramenta</a> ·
+    <a href="Nexus_ESECCinfaesCTE_Manual_Esquemas.html" style="font-size:.78rem;color:var(--accent);font-weight:600;text-decoration:none">📖 Manual</a>
+  </div>
+</div>
+
+<div style="margin-top:40px;padding-top:20px;border-top:2px solid var(--border);text-align:center;color:var(--muted);font-size:.78rem">
+  <p>Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC</p>
+  <p style="margin-top:4px">Desenvolvido por Avelino A. Colaço</p>
+</div>
+</section>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Nexus ESECCinfãesCTE · ES/3 Prof. Dr. Flávio F. Pinto Resende · Curso EAC</p>
+  <p>Desenvolvido por <a href="#">Avelino A. Colaço</a> ·
+    <a href="index.html">← Voltar ao Nexus</a></p>
+</div>
+
+</body>
+</html>
